@@ -1,9 +1,13 @@
 // Simple Local AI Service Server
 // This is a basic server that simulates an AI service for development purposes
 // You can replace this with calls to your actual AI service (OpenAI, Anthropic, local LLM, etc.)
+require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
 const cors = require('cors');
+const awsBedrockClient = require('./aws/bedrock'); // Import the Bedrock AI client
+
+const bedrockAIClient = new awsBedrockClient();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,24 +25,22 @@ app.post('/api/ai', async (req, res) => {
         console.log(`Task: ${task}`);
         console.log(`Prompt: ${prompt}`);
         console.log(`Context length: ${context ? context.length : 0} chars`);
-        
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        // Mock AI responses based on prompt keywords
-        let response = generateMockResponse(prompt, context);
-        
+
+        const bedrockResponse = await bedrockAIClient.invokeModel(prompt, context, {
+            maxTokens,
+            temperature,
+            task
+        });
+
+        console.log(`Bedrock AI Response:`, bedrockResponse);
+
         res.json({
             success: true,
-            response: response,
-            model: 'local-mock-ai',
-            usage: {
-                prompt_tokens: prompt.length / 4,
-                completion_tokens: response.length / 4,
-                total_tokens: (prompt.length + response.length) / 4
-            }
+            response: bedrockResponse.response,
+            model: bedrockResponse.model,
+            usage: bedrockResponse.usage
         });
-        
+
     } catch (error) {
         console.error('AI Service Error:', error);
         res.status(500).json({
