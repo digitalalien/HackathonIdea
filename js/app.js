@@ -1,4 +1,5 @@
 // Main Application Logic
+
 class XMLEditor {
     constructor() {
         this.xmlRenderer = new XMLRenderer();
@@ -109,17 +110,6 @@ class XMLEditor {
 
         this.elements.importXml.addEventListener('change', (e) => {
             this.importXml(e.target.files[0]);
-        });
-
-        // AI Integration
-        this.elements.callAI.addEventListener('click', () => {
-            this.callAI();
-        });
-
-        this.elements.aiPrompt.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.callAI();
-            }
         });
 
         // Modal controls
