@@ -53,6 +53,11 @@ app.post('/api/ai', async (req, res) => {
 function generateMockResponse(prompt, context) {
     const lowerPrompt = prompt.toLowerCase();
     
+    // Check for change analysis requests
+    if (lowerPrompt.includes('compare') && lowerPrompt.includes('xml')) {
+        return generateChangeAnalysisResponse(prompt, context);
+    }
+    
     // XML Enhancement
     if (lowerPrompt.includes('enhance') || lowerPrompt.includes('improve')) {
         return generateEnhancementResponse(context);
@@ -78,6 +83,11 @@ function generateMockResponse(prompt, context) {
         return generateMetadataResponse(context);
     }
     
+    // Revision comment generation
+    if (lowerPrompt.includes('revision comment') || lowerPrompt.includes('change analysis')) {
+        return generateRevisionCommentResponse(prompt, context);
+    }
+    
     // Structure suggestions
     if (lowerPrompt.includes('structure') || lowerPrompt.includes('organize')) {
         return generateStructureResponse(context);
@@ -85,6 +95,192 @@ function generateMockResponse(prompt, context) {
     
     // Default response
     return generateDefaultResponse(prompt, context);
+}
+
+function generateChangeAnalysisResponse(prompt, context) {
+    // Extract original and current content from the prompt
+    const originalMatch = prompt.match(/ORIGINAL XML:\s*([\s\S]*?)\s*CURRENT XML:/);
+    const currentMatch = prompt.match(/CURRENT XML:\s*([\s\S]*?)(?:\s*Please analyze|$)/);
+    
+    const originalXML = originalMatch ? originalMatch[1].trim() : '';
+    const currentXML = currentMatch ? currentMatch[1].trim() : '';
+    
+    if (!originalXML || !currentXML) {
+        return 'Unable to perform comparison - both original and current XML content required.';
+    }
+    
+    // Perform intelligent analysis
+    const analysis = performIntelligentComparison(originalXML, currentXML);
+    
+    return `**INTELLIGENT CHANGE ANALYSIS**
+
+${analysis.summary}
+
+**DETAILED FINDINGS:**
+
+${analysis.details}
+
+**IMPACT ASSESSMENT:**
+${analysis.impact}
+
+**RECOMMENDED REVISION COMMENT:**
+"${analysis.recommendedComment}"`;
+}
+
+function performIntelligentComparison(originalXML, currentXML) {
+    // Simplified but intelligent comparison logic
+    const changes = {
+        contentChanges: [],
+        structureChanges: [],
+        attributeChanges: [],
+        safetyImpacts: [],
+        proceduralImpacts: []
+    };
+    
+    // Content analysis
+    if (currentXML.length > originalXML.length) {
+        const addedContent = findAddedContent(originalXML, currentXML);
+        changes.contentChanges.push(`Added: ${addedContent}`);
+        
+        if (addedContent.toLowerCase().includes('safety') || addedContent.toLowerCase().includes('caution') || addedContent.toLowerCase().includes('warning')) {
+            changes.safetyImpacts.push('New safety information added');
+        }
+    } else if (currentXML.length < originalXML.length) {
+        changes.contentChanges.push('Content was removed or simplified');
+    } else if (originalXML !== currentXML) {
+        changes.contentChanges.push('Content was modified while maintaining similar length');
+    }
+    
+    // Structure analysis
+    const originalElements = extractElementTypes(originalXML);
+    const currentElements = extractElementTypes(currentXML);
+    
+    const addedElements = currentElements.filter(elem => !originalElements.includes(elem));
+    const removedElements = originalElements.filter(elem => !currentElements.includes(elem));
+    
+    if (addedElements.length > 0) {
+        changes.structureChanges.push(`Added elements: ${addedElements.join(', ')}`);
+    }
+    if (removedElements.length > 0) {
+        changes.structureChanges.push(`Removed elements: ${removedElements.join(', ')}`);
+    }
+    
+    // Generate analysis summary
+    const summary = generateAnalysisSummary(changes);
+    const details = generateDetailedFindings(changes);
+    const impact = generateImpactAssessment(changes);
+    const recommendedComment = generateIntelligentRevisionComment(changes);
+    
+    return { summary, details, impact, recommendedComment };
+}
+
+function findAddedContent(original, current) {
+    // Simple content extraction for demonstration
+    const originalText = original.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const currentText = current.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    if (currentText.length > originalText.length) {
+        // Find the difference (simplified)
+        const words = currentText.split(' ');
+        const originalWords = originalText.split(' ');
+        
+        const newWords = words.filter((word, index) => index >= originalWords.length || word !== originalWords[index]);
+        return newWords.slice(0, 10).join(' ') + (newWords.length > 10 ? '...' : '');
+    }
+    
+    return 'new content';
+}
+
+function extractElementTypes(xml) {
+    const elementRegex = /<(\w+)[^>]*>/g;
+    const elements = [];
+    let match;
+    
+    while ((match = elementRegex.exec(xml)) !== null) {
+        if (!elements.includes(match[1])) {
+            elements.push(match[1]);
+        }
+    }
+    
+    return elements;
+}
+
+function generateAnalysisSummary(changes) {
+    const totalChanges = changes.contentChanges.length + changes.structureChanges.length + changes.attributeChanges.length;
+    
+    if (totalChanges === 0) {
+        return 'No significant changes detected between the original and current versions.';
+    }
+    
+    let summary = `Detected ${totalChanges} significant change${totalChanges > 1 ? 's' : ''} to the document. `;
+    
+    if (changes.safetyImpacts.length > 0) {
+        summary += 'IMPORTANT: Safety-related modifications identified. ';
+    }
+    
+    if (changes.proceduralImpacts.length > 0) {
+        summary += 'Procedural changes may affect operational workflows. ';
+    }
+    
+    return summary.trim();
+}
+
+function generateDetailedFindings(changes) {
+    let details = '';
+    
+    if (changes.contentChanges.length > 0) {
+        details += '📝 **Content Changes:**\n';
+        changes.contentChanges.forEach(change => {
+            details += `   • ${change}\n`;
+        });
+        details += '\n';
+    }
+    
+    if (changes.structureChanges.length > 0) {
+        details += '🏗️ **Structure Changes:**\n';
+        changes.structureChanges.forEach(change => {
+            details += `   • ${change}\n`;
+        });
+        details += '\n';
+    }
+    
+    if (changes.safetyImpacts.length > 0) {
+        details += '⚠️ **Safety Impacts:**\n';
+        changes.safetyImpacts.forEach(impact => {
+            details += `   • ${impact}\n`;
+        });
+        details += '\n';
+    }
+    
+    return details.trim() || 'No specific detailed findings to report.';
+}
+
+function generateImpactAssessment(changes) {
+    if (changes.safetyImpacts.length > 0) {
+        return 'HIGH IMPACT: Safety-related changes require immediate attention and proper communication to all users.';
+    } else if (changes.proceduralImpacts.length > 0) {
+        return 'MEDIUM IMPACT: Procedural changes may require training updates and workflow adjustments.';
+    } else if (changes.contentChanges.length > 0 || changes.structureChanges.length > 0) {
+        return 'LOW-MEDIUM IMPACT: Content updates improve documentation accuracy and usability.';
+    } else {
+        return 'MINIMAL IMPACT: Changes are primarily cosmetic or organizational.';
+    }
+}
+
+function generateIntelligentRevisionComment(changes) {
+    if (changes.safetyImpacts.length > 0) {
+        return 'Added critical safety warnings and updated procedural guidance for enhanced operational safety.';
+    } else if (changes.structureChanges.some(c => c.includes('Added elements'))) {
+        return 'Enhanced document structure with additional content sections for improved completeness.';
+    } else if (changes.contentChanges.some(c => c.includes('Added'))) {
+        return 'Updated content with additional technical information and operational guidance.';
+    } else if (changes.contentChanges.some(c => c.includes('modified'))) {
+        return 'Modified existing content to reflect current operational requirements and best practices.';
+    } else if (changes.contentChanges.some(c => c.includes('removed'))) {
+        return 'Removed obsolete information and streamlined content for improved clarity.';
+    } else {
+        return 'Updated documentation with improvements for enhanced accuracy and usability.';
+    }
 }
 
 function generateEnhancementResponse(context) {
@@ -381,6 +577,77 @@ function generateMetadataResponse(context) {
 - Document classification and keywords
 - Timestamped elements
 - Unique document identifier`;
+}
+
+function generateRevisionCommentResponse(prompt, context) {
+    // Extract key information from the prompt to understand what changed
+    const lowerPrompt = prompt.toLowerCase();
+    
+    if (lowerPrompt.includes('added') || lowerPrompt.includes('addition')) {
+        return generateRevisionComment('addition', prompt, context);
+    } else if (lowerPrompt.includes('removed') || lowerPrompt.includes('deleted')) {
+        return generateRevisionComment('deletion', prompt, context);
+    } else if (lowerPrompt.includes('modified') || lowerPrompt.includes('updated')) {
+        return generateRevisionComment('modification', prompt, context);
+    } else if (lowerPrompt.includes('corrected') || lowerPrompt.includes('fixed')) {
+        return generateRevisionComment('correction', prompt, context);
+    } else if (lowerPrompt.includes('reorganized') || lowerPrompt.includes('restructured')) {
+        return generateRevisionComment('reorganization', prompt, context);
+    } else {
+        return generateRevisionComment('general', prompt, context);
+    }
+}
+
+function generateRevisionComment(changeType, prompt, context) {
+    const templates = {
+        addition: [
+            "Added new safety warning for enhanced operational safety.",
+            "Included additional troubleshooting steps for improved maintenance guidance.",
+            "Added caution note to reflect updated manufacturer recommendations.",
+            "Incorporated new procedure steps based on latest technical specifications.",
+            "Added reference documentation for compliance requirements."
+        ],
+        deletion: [
+            "Removed obsolete procedure steps no longer applicable to current operations.",
+            "Deleted outdated safety warnings replaced by current guidelines.",
+            "Removed deprecated technical specifications per manufacturer update.",
+            "Eliminated redundant information for improved clarity.",
+            "Removed superseded maintenance procedures."
+        ],
+        modification: [
+            "Updated technical specifications to reflect latest manufacturer standards.",
+            "Modified safety procedures to align with current regulatory requirements.",
+            "Revised maintenance intervals based on operational experience.",
+            "Updated part numbers and specifications per latest OEM documentation.",
+            "Modified procedural steps for improved operational efficiency."
+        ],
+        correction: [
+            "Corrected technical specifications to match manufacturer documentation.",
+            "Fixed formatting inconsistencies throughout the manual.",
+            "Corrected cross-reference errors in procedural sections.",
+            "Fixed typographical errors and improved readability.",
+            "Corrected safety warning placement for better visibility."
+        ],
+        reorganization: [
+            "Reorganized content sections for improved logical flow and usability.",
+            "Restructured troubleshooting procedures for enhanced clarity.",
+            "Reordered safety warnings for better prominence and compliance.",
+            "Reorganized maintenance procedures by system for easier navigation.",
+            "Restructured content hierarchy for improved document organization."
+        ],
+        general: [
+            "Updated content to reflect current operational requirements.",
+            "Revised documentation for enhanced clarity and compliance.",
+            "Modified procedures based on operational feedback and best practices.",
+            "Updated manual content per latest technical review.",
+            "Improved content organization and technical accuracy."
+        ]
+    };
+    
+    const commentTemplates = templates[changeType] || templates.general;
+    const randomIndex = Math.floor(Math.random() * commentTemplates.length);
+    
+    return commentTemplates[randomIndex];
 }
 
 function generateStructureResponse(context) {
