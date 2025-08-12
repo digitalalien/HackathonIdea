@@ -28,7 +28,7 @@ app.use((req, res, next) => {
 
 // AI Service Endpoint
 app.post('/api/ai', async (req, res) => {
-    try {        
+    try {
         // Check if body exists
         if (!req.body) {
             return res.status(400).json({
@@ -38,8 +38,8 @@ app.post('/api/ai', async (req, res) => {
             });
         }
 
-        const { prompt, context = '', maxTokens = 1000, temperature = 0.7, task } = req.body;
-        
+        const { prompt, context = '', maxTokens = 1000, temperature = 0.7 } = req.body;
+
         // Check if prompt exists
         if (!prompt) {
             return res.status(400).json({
@@ -53,7 +53,7 @@ app.post('/api/ai', async (req, res) => {
         let systemPrompt = '';
 
         console.log(prompt);
-        
+
         switch (prompt) {
             case 'xml_expert':
                 systemPrompt = prompts.getXMLExpertPrompt(context);
@@ -73,12 +73,15 @@ app.post('/api/ai', async (req, res) => {
             case 'xml_editor':
                 systemPrompt = prompts.getXMLEditorPrompt(context);
                 break;
+            case 'xml_produce_edits':
+                systemPrompt = prompts.getXMLProduceEditsPrompt(context);
+                break;
             default:
                 systemPrompt = prompts.getXMLExpertPrompt(context); // Default to general XML expert
                 break;
         }
 
-        
+
         console.log(`AI Request received:`);
         console.log(`Context: ${context}`);
         console.log(`User Prompt: ${prompt}`);
@@ -87,8 +90,7 @@ app.post('/api/ai', async (req, res) => {
 
         const bedrockResponse = await bedrockAIClient.invokeModel(systemPrompt, context, {
             maxTokens,
-            temperature,
-            task
+            temperature
         });
 
         console.log(`Bedrock AI Response:`, bedrockResponse);

@@ -151,6 +151,20 @@ When editing XML:
 Always return the complete modified XML document and explain the changes made.`;
 }
 
+function getXMLProduceEditsPrompt(context = '') {
+    return `You are an expert XML editor.
+You will receive a list of revision instructions, followed by the XML content to modify.
+Apply ONLY the requested revisions to the XML.
+
+Return ONLY a single, complete, valid XML document as your response—do not include any explanations, comments, or extra text.
+If the instructions are ambiguous or reference multiple documents, return only ONE XML document that best fits the instructions.
+NEVER return more than one XML document or more than one root element.
+
+Instructions and XML to edit:
+${context}
+
+Respond with the revised XML only.`;
+}
 
 module.exports = {
     getXMLExpertPrompt,
@@ -158,5 +172,6 @@ module.exports = {
     getXMLChangeAnalysisPrompt,
     getXMLValidationPrompt,
     getXMLDocumentationPrompt,
-    getXMLEditorPrompt
+    getXMLEditorPrompt,
+    getXMLProduceEditsPrompt
 };
