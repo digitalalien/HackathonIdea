@@ -80,7 +80,7 @@ app.post('/api/ai', async (req, res) => {
         console.log(`System Prompt: ${systemPrompt.substring(0, 200)}...`);
         console.log(`Context length: ${context ? context.length : 0} chars`);
 
-        const bedrockResponse = await bedrockAIClient.invokeModel(systemPrompt, context, {
+        const bedrockResponse = await bedrockAIClient.invokeModel(systemPrompt, {
             maxTokens,
             temperature,
             task

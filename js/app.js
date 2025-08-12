@@ -476,11 +476,3 @@ document.addEventListener('DOMContentLoaded', () => {
         const newHtml = currentContent + '<p>Test change for revision</p>';
         const delta = window.xmlEditor.quill.clipboard.convert(newHtml);
         window.xmlEditor.quill.setContents(delta);
-        window.xmlEditor.updateXmlFromEditor();
-        console.log('Made test change. Click "Save with AI Revision" to test the revision system.');
-    };
-    
-    console.log('XML WYSIWYG Editor loaded successfully!');
-    console.log('Try: showAICapabilities(), getPromptTemplates(), or testRevision() in the console');
-    console.log('💾 New: Save with AI Revision button generates automatic revision comments!');
-});

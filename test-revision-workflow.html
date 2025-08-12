@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Revision Workflow</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .button { background: #007cba; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #005a8b; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        textarea { width: 100%; height: 150px; margin: 10px 0; }
+        .output { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test: Save with AI Revision Workflow</h1>
+        
+        <div class="section">
+            <h3>Step 1: Original XML</h3>
+            <textarea id="originalXML"><?xml version="1.0" encoding="UTF-8"?>
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="chapter">
+    <title id="title-1">Engine Maintenance Procedures</title>
+    <para id="para-1">
+        Perform routine maintenance checks every 100 hours of operation.
+    </para>
+    <para id="para-2">
+        Check oil levels and replace filters as needed.
+    </para>
+</topic></textarea>
+        </div>
+
+        <div class="section">
+            <h3>Step 2: Updated XML (Simulate User Changes)</h3>
+            <textarea id="currentXML"><?xml version="1.0" encoding="UTF-8"?>
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="chapter">
+    <title id="title-1">Engine Maintenance Procedures</title>
+    <para id="para-1">
+        Perform routine maintenance checks every 100 hours of operation.
+    </para>
+    <para id="para-2">
+        Check oil levels and replace filters as needed.
+    </para>
+    <warning id="warning-1">
+        CAUTION: Ensure engine is completely cool before beginning maintenance.
+    </warning>
+    <para id="para-3">
+        New safety protocol requires personal protective equipment during all maintenance activities.
+    </para>
+</topic></textarea>
+        </div>
+
+        <div class="section">
+            <h3>Step 3: Test AI Change Analysis</h3>
+            <button class="button" onclick="testChangeAnalysis()">🔍 Analyze Changes with AI</button>
+            <div id="analysisResult" class="output" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>Step 4: Test AI Revision Comment Generation</h3>
+            <button class="button" onclick="testRevisionComment()" disabled id="commentBtn">💬 Generate Revision Comment</button>
+            <div id="commentResult" class="output" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>Step 5: Complete Revision XML</h3>
+            <button class="button" onclick="generateFinalXML()" disabled id="finalBtn">📝 Generate Final XML with Revision</button>
+            <div id="finalResult" class="output" style="display: none;"></div>
+        </div>
+
+        <div class="section">
+            <h3>Status Messages</h3>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        let analysisData = '';
+        let revisionComment = '';
+
+        function setStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = `<div class="${type}">${new Date().toLocaleTimeString()}: ${message}</div>` + status.innerHTML;
+        }
+
+        async function testChangeAnalysis() {
+            try {
+                setStatus('Starting AI change analysis...', 'info');
+                
+                const originalXML = document.getElementById('originalXML').value;
+                const currentXML = document.getElementById('currentXML').value;
+                
+                const prompt = `You are an expert technical documentation analyst. Compare these two XML documents and provide a detailed analysis of what changed. Focus on meaningful changes that would be important for revision tracking in a technical manual.
+
+ORIGINAL XML:
+${originalXML}
+
+CURRENT XML:
+${currentXML}
+
+Please analyze and provide:
+1. What specific content was added, modified, or removed
+2. The significance of each change
+3. Impact on users/operators
+4. Any safety or procedural implications
+
+Format your response as a clear, structured analysis that explains the changes in professional technical documentation language. Be specific about what changed rather than generic.
+
+If no significant changes are detected, state that clearly.`;
+
+                const response = await fetch('http://localhost:3001/api/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        context: '',
+                        maxTokens: 500,
+                        temperature: 0.3,
+                        task: 'xml_change_analysis'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    analysisData = data.response;
+                    document.getElementById('analysisResult').innerHTML = `
+                        <h4>AI Analysis Result:</h4>
+                        <pre>${analysisData}</pre>
+                        <p><strong>Model:</strong> ${data.model}</p>
+                        <p><strong>Usage:</strong> ${JSON.stringify(data.usage)}</p>
+                    `;
+                    document.getElementById('analysisResult').style.display = 'block';
+                    document.getElementById('commentBtn').disabled = false;
+                    setStatus('Change analysis completed successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                setStatus(`Change analysis failed: ${error.message}`, 'error');
+                console.error('Change analysis error:', error);
+            }
+        }
+
+        async function testRevisionComment() {
+            try {
+                setStatus('Generating AI revision comment...', 'info');
+                
+                const prompt = `Based on the following detailed change analysis, generate a concise, professional revision comment for a technical manual. The comment should be 1-2 sentences that clearly explain what changed and why it matters to users.
+
+Change Analysis:
+${analysisData}
+
+Requirements for the revision comment:
+- Be specific about what changed (not generic)
+- Use professional technical documentation language
+- Keep it concise (under 150 characters if possible)
+- Focus on the most significant change if multiple changes exist
+- Use action words (Updated, Added, Corrected, Modified, etc.)
+
+Examples of good revision comments:
+- "Updated caution note under engine startup procedure to reflect new OEM guidance."
+- "Added safety warning for high-voltage components in maintenance section."
+- "Corrected torque specifications for wheel lug nuts based on manufacturer update."
+
+Generate ONLY the revision comment text (no quotes, no additional formatting):`;
+
+                const response = await fetch('http://localhost:3001/api/ai', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        context: '',
+                        maxTokens: 100,
+                        temperature: 0.2,
+                        task: 'xml_change_analysis'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    let comment = data.response.trim();
+                    
+                    // Clean up the response
+                    comment = comment.replace(/^["']|["']$/g, ''); // Remove quotes
+                    comment = comment.replace(/^Revision comment:\s*/i, ''); // Remove prefixes
+                    comment = comment.replace(/^Comment:\s*/i, ''); // Remove prefixes
+                    comment = comment.split('\n')[0]; // Take first line only
+                    
+                    // Ensure it ends with a period
+                    if (comment && !comment.endsWith('.') && !comment.endsWith('!') && !comment.endsWith('?')) {
+                        comment += '.';
+                    }
+                    
+                    revisionComment = comment || 'Updated content with improvements and corrections.';
+                    
+                    document.getElementById('commentResult').innerHTML = `
+                        <h4>Generated Revision Comment:</h4>
+                        <p><strong>"${revisionComment}"</strong></p>
+                        <p><strong>Length:</strong> ${revisionComment.length} characters</p>
+                        <p><strong>Model:</strong> ${data.model}</p>
+                    `;
+                    document.getElementById('commentResult').style.display = 'block';
+                    document.getElementById('finalBtn').disabled = false;
+                    setStatus('Revision comment generated successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                setStatus(`Revision comment generation failed: ${error.message}`, 'error');
+                console.error('Revision comment error:', error);
+            }
+        }
+
+        function generateFinalXML() {
+            try {
+                setStatus('Generating final XML with revision...', 'info');
+                
+                const currentXML = document.getElementById('currentXML').value;
+                const today = new Date().toISOString().split('T')[0];
+                const revisionNumber = '1.1'; // Auto-generated
+                
+                // Create revision XML
+                const revisionXML = `  <Revision>
+    <RevisionNumber>${revisionNumber}</RevisionNumber>
+    <RevisionDate>${today}</RevisionDate>
+    <RevisionComment>${revisionComment}</RevisionComment>
+  </Revision>`;
+                
+                // Insert revision into XML (simplified approach)
+                let finalXML = currentXML;
+                
+                // Find the closing tag of the root element
+                const rootCloseIndex = finalXML.lastIndexOf('</topic>');
+                if (rootCloseIndex !== -1) {
+                    // Insert revision before the closing tag
+                    const revisionsSection = `
+  <Revisions>
+${revisionXML}
+  </Revisions>
+`;
+                    finalXML = finalXML.slice(0, rootCloseIndex) + revisionsSection + finalXML.slice(rootCloseIndex);
+                }
+                
+                document.getElementById('finalResult').innerHTML = `
+                    <h4>Final XML with Revision:</h4>
+                    <textarea style="height: 300px; font-family: monospace;">${finalXML}</textarea>
+                    <p><strong>Revision Number:</strong> ${revisionNumber}</p>
+                    <p><strong>Revision Date:</strong> ${today}</p>
+                    <p><strong>Revision Comment:</strong> "${revisionComment}"</p>
+                `;
+                document.getElementById('finalResult').style.display = 'block';
+                setStatus('Final XML with revision generated successfully', 'success');
+
+            } catch (error) {
+                setStatus(`Final XML generation failed: ${error.message}`, 'error');
+                console.error('Final XML error:', error);
+            }
+        }
+
+        // Initialize
+        setStatus('Test page loaded. Click "Analyze Changes with AI" to start the workflow.', 'info');
+    </script>
+</body>
+</html>
