@@ -21,7 +21,10 @@ class RevisionManager {
             revisionComment: document.getElementById('revisionComment'),
             regenerateComment: document.getElementById('regenerateComment'),
             saveRevision: document.getElementById('saveRevision'),
-            cancelRevision: document.getElementById('cancelRevision')
+            cancelRevision: document.getElementById('cancelRevision'),
+            revisionCommentsList: document.getElementById('revisionCommentsList'),
+            refreshRevisions: document.getElementById('refreshRevisions'),
+            exportRevisions: document.getElementById('exportRevisions')
         };
 
         // Set default date to today
@@ -56,6 +59,16 @@ class RevisionManager {
         this.xmlEditor.quill.on('text-change', () => {
             this.currentContent = this.getCurrentXML();
         });
+
+        // Revision panel event listeners
+        this.elements.refreshRevisions.addEventListener('click', () => {
+            console.log('Manual refresh triggered by user');
+            this.refreshRevisionsList();
+        });
+
+        this.elements.exportRevisions.addEventListener('click', () => {
+            this.exportRevisionsList();
+        });
     }
 
     setupTooltips() {
@@ -71,9 +84,12 @@ class RevisionManager {
     }
 
     getCurrentXML() {
-        return this.xmlEditor.isXmlView ? 
-            this.xmlEditor.elements.xmlSource.value : 
-            this.xmlEditor.currentXml;
+        // Get the most current XML content
+        if (this.xmlEditor.isXmlView) {
+            return this.xmlEditor.elements.xmlSource.value || '';
+        } else {
+            return this.xmlEditor.currentXml || '';
+        }
     }
 
     async initiateRevisionSave() {
@@ -530,10 +546,27 @@ Generate ONLY the revision comment text (no quotes, no additional formatting):`;
 
     // Method to highlight revision elements in the preview
     highlightRevisions(previewElement) {
-        const revisionElements = previewElement.querySelectorAll('revision, Revision');
+        // Look for revision elements in the formatted XML
+        const revisionElements = previewElement.querySelectorAll('revision, revisioncomment, RevisionComment');
         
-        revisionElements.forEach(element => {
+        revisionElements.forEach((element, index) => {
+            // Add CSS class for styling
             element.classList.add('revision-element');
+            
+            // Make revision elements clickable
+            element.style.cursor = 'pointer';
+            element.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Remove previous highlights
+                previewElement.querySelectorAll('.revision-highlight').forEach(el => {
+                    el.classList.remove('revision-highlight');
+                });
+                
+                // Highlight this revision
+                element.classList.add('revision-highlight');
+            });
             
             // Add hover tooltip
             element.addEventListener('mouseenter', (e) => {
@@ -547,9 +580,10 @@ Generate ONLY the revision comment text (no quotes, no additional formatting):`;
     }
 
     showRevisionTooltip(event, element) {
-        const revisionNumber = element.querySelector('RevisionNumber, revisionnumber')?.textContent || 'Unknown';
-        const revisionDate = element.querySelector('RevisionDate, revisiondate')?.textContent || 'Unknown';
-        const revisionComment = element.querySelector('RevisionComment, revisioncomment')?.textContent || 'No comment';
+        // Extract revision info from the XML element
+        const revisionNumber = element.getAttribute('id') || element.querySelector('*[id]')?.getAttribute('id') || 'Unknown';
+        const revisionDate = element.getAttribute('date') || element.querySelector('*[date]')?.getAttribute('date') || 'Unknown';
+        const revisionComment = element.textContent?.trim() || 'No comment';
         
         this.tooltip.innerHTML = `
             <strong>Revision ${revisionNumber}</strong><br>
@@ -569,6 +603,300 @@ Generate ONLY the revision comment text (no quotes, no additional formatting):`;
     // Get revision history
     getRevisionHistory() {
         return this.revisionHistory;
+    }
+
+    // Parse and display revision comments from XML
+    refreshRevisionsList() {
+        try {
+            console.log('=== Revision Refresh Debug ===');
+            console.log('isXmlView:', this.xmlEditor.isXmlView);
+            console.log('xmlSource.value length:', this.xmlEditor.elements.xmlSource.value?.length || 0);
+            console.log('currentXml length:', this.xmlEditor.currentXml?.length || 0);
+            
+            const xmlContent = this.getCurrentXML();
+            console.log('Got XML content length:', xmlContent?.length || 0);
+            console.log('XML content preview:', xmlContent?.substring(0, 200) + '...');
+            
+            if (!xmlContent || xmlContent.trim().length === 0) {
+                console.log('No XML content available for revision parsing');
+                this.displayRevisionsList([]);
+                return;
+            }
+            
+            const revisions = this.parseRevisionsFromXML(xmlContent);
+            console.log('Found revisions:', revisions.length, revisions);
+            this.displayRevisionsList(revisions);
+        } catch (error) {
+            console.error('Error refreshing revisions list:', error);
+            this.xmlEditor.setStatus('Error parsing revisions from XML', 'error');
+        }
+    }
+
+    parseRevisionsFromXML(xmlContent) {
+        const revisions = [];
+        
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlContent, 'application/xml');
+            
+            // Check for parsing errors
+            const parserError = doc.querySelector('parsererror');
+            if (parserError) {
+                console.warn('XML parsing error:', parserError.textContent);
+                return [];
+            }
+
+            // Look for structured revision elements (Revision, RevisionNumber, etc.)
+            const revisionElements = doc.querySelectorAll('Revision, revision');
+            revisionElements.forEach((revElement, index) => {
+                const number = this.getElementText(revElement, 'RevisionNumber, revisionnumber') || `Rev-${index + 1}`;
+                const date = this.getElementText(revElement, 'RevisionDate, revisiondate') || 'Unknown';
+                const comment = this.getElementText(revElement, 'RevisionComment, revisioncomment') || 'No comment';
+                
+                revisions.push({
+                    type: 'structured',
+                    number,
+                    date,
+                    comment,
+                    element: revElement
+                });
+            });
+
+            // Look for revision comment elements (revisionComment, etc.)
+            const commentElements = doc.querySelectorAll('revisionComment, revisioncomment, RevisionComment');
+            commentElements.forEach((commentElement, index) => {
+                const id = commentElement.getAttribute('id') || `comment-${index + 1}`;
+                const comment = commentElement.textContent?.trim() || 'No comment';
+                
+                // Try to extract date/number from id or attributes
+                const number = commentElement.getAttribute('revision') || 
+                              commentElement.getAttribute('number') || 
+                              id;
+                
+                revisions.push({
+                    type: 'comment',
+                    number,
+                    date: 'From document',
+                    comment,
+                    element: commentElement,
+                    id
+                });
+            });
+
+            // Sort revisions by number (attempt to parse version numbers)
+            revisions.sort((a, b) => {
+                const parseVersion = (version) => {
+                    const parts = version.toString().match(/(\d+)\.?(\d*)/);
+                    if (parts) {
+                        return parseFloat(parts[1] + '.' + (parts[2] || '0'));
+                    }
+                    return 0;
+                };
+                
+                return parseVersion(b.number) - parseVersion(a.number);
+            });
+
+        } catch (error) {
+            console.error('Error parsing XML for revisions:', error);
+        }
+        
+        return revisions;
+    }
+
+    getElementText(parent, selectors) {
+        const element = parent.querySelector(selectors);
+        return element ? element.textContent?.trim() : null;
+    }
+
+    displayRevisionsList(revisions) {
+        const listContainer = this.elements.revisionCommentsList;
+        
+        if (revisions.length === 0) {
+            listContainer.innerHTML = '<p class="no-revisions">No revision comments found in current document</p>';
+            // Reset the panel title when no revisions
+            this.updatePanelTitle(0);
+            return;
+        }
+
+        // Update the panel title with count
+        this.updatePanelTitle(revisions.length);
+
+        // Generate revision items HTML
+        const revisionsHTML = revisions.map((revision, index) => {
+            const typeIcon = revision.type === 'structured' ? '📋' : '💬';
+            const dateDisplay = this.formatRevisionDate(revision.date);
+            
+            return `
+                <div class="revision-item" data-index="${index}" data-type="${revision.type}">
+                    <div class="revision-header">
+                        <span class="revision-number">${typeIcon} ${revision.number}</span>
+                        <span class="revision-date">${dateDisplay}</span>
+                    </div>
+                    <p class="revision-comment">${this.truncateComment(revision.comment, 150)}</p>
+                </div>
+            `;
+        }).join('');
+
+        listContainer.innerHTML = revisionsHTML;
+
+        // Add click handlers for revision items
+        listContainer.querySelectorAll('.revision-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                this.selectRevisionItem(item, revisions[index]);
+            });
+        });
+
+        this.xmlEditor.setStatus(`Found ${revisions.length} revision comment${revisions.length > 1 ? 's' : ''}`, 'success');
+    }
+
+    updatePanelTitle(count) {
+        const panelTitle = document.querySelector('.revision-panel h3');
+        if (panelTitle) {
+            if (count > 0) {
+                panelTitle.innerHTML = `Revision Comments <span class="revision-count">${count}</span>`;
+            } else {
+                panelTitle.innerHTML = 'Revision Comments';
+            }
+        }
+    }
+
+    formatRevisionDate(dateStr) {
+        if (dateStr === 'Unknown' || dateStr === 'From document') {
+            return dateStr;
+        }
+        
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                return dateStr;
+            }
+            return date.toLocaleDateString();
+        } catch (error) {
+            return dateStr;
+        }
+    }
+
+    truncateComment(comment, maxLength) {
+        if (comment.length <= maxLength) {
+            return comment;
+        }
+        return comment.substring(0, maxLength).trim() + '...';
+    }
+
+    selectRevisionItem(itemElement, revision) {
+        // Remove previous selection
+        this.elements.revisionCommentsList.querySelectorAll('.revision-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        // Select current item
+        itemElement.classList.add('selected');
+        
+        // Highlight the revision in the preview if possible
+        this.highlightRevisionInPreview(revision);
+        
+        // Show full comment in status or modal
+        this.showRevisionDetails(revision);
+    }
+
+    highlightRevisionInPreview(revision) {
+        // Remove previous highlights
+        const preview = document.getElementById('xmlPreview');
+        if (preview) {
+            preview.querySelectorAll('.revision-highlight').forEach(el => {
+                el.classList.remove('revision-highlight');
+            });
+            
+            // Try to find and highlight this revision in the preview
+            const revisionElements = preview.querySelectorAll('revision, revisioncomment, RevisionComment');
+            
+            revisionElements.forEach(element => {
+                const text = element.textContent?.trim();
+                const id = element.getAttribute('id');
+                
+                // Try to match by revision number, id, or comment content
+                const hasRevisionId = id && (id.includes(revision.number) || id.includes(`rev-${revision.number.toString().padStart(3, '0')}`));
+                const hasRevisionComment = revision.comment && text && text.includes(revision.comment.substring(0, 30));
+                
+                if (hasRevisionId || hasRevisionComment) {
+                    element.classList.add('revision-highlight');
+                    
+                    // Scroll into view
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+    }
+
+    showRevisionDetails(revision) {
+        // Create a detailed tooltip or status message
+        const details = `📝 Revision ${revision.number} (${revision.date}): ${revision.comment}`;
+        this.xmlEditor.setStatus(details, 'info');
+        
+        // Optional: Show in a small modal or expanded view
+        console.log('Revision Details:', revision);
+    }
+
+    exportRevisionsList() {
+        try {
+            const xmlContent = this.getCurrentXML();
+            const revisions = this.parseRevisionsFromXML(xmlContent);
+            
+            if (revisions.length === 0) {
+                this.xmlEditor.setStatus('No revisions to export', 'warning');
+                return;
+            }
+
+            // Create export content
+            const exportContent = this.createRevisionExport(revisions);
+            
+            // Download as text file
+            const blob = new Blob([exportContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `revision-comments-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.xmlEditor.setStatus('Revision comments exported successfully', 'success');
+            
+        } catch (error) {
+            console.error('Error exporting revisions:', error);
+            this.xmlEditor.setStatus('Error exporting revision comments', 'error');
+        }
+    }
+
+    createRevisionExport(revisions) {
+        const header = `REVISION COMMENTS EXPORT
+Generated: ${new Date().toLocaleString()}
+Document: ${document.getElementById('currentDocument')?.textContent || 'Unknown'}
+Total Revisions: ${revisions.length}
+
+${'='.repeat(50)}
+
+`;
+
+        const revisionsText = revisions.map((revision, index) => {
+            return `${index + 1}. REVISION ${revision.number}
+   Date: ${revision.date}
+   Type: ${revision.type === 'structured' ? 'Structured Revision' : 'Revision Comment'}
+   Comment: ${revision.comment}
+   
+`;
+        }).join('');
+
+        return header + revisionsText;
+    }
+
+    // Call this when XML content changes to auto-refresh the list
+    onXMLContentChanged() {
+        // Auto-refresh the revisions list when content changes
+        if (this.elements.revisionCommentsList && this.getCurrentXML()) {
+            this.refreshRevisionsList();
+        }
     }
 }
 

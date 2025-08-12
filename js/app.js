@@ -48,6 +48,7 @@ class XMLEditor {
             statusMessage: document.getElementById('statusMessage'),
             aiModal: document.getElementById('aiModal'),
             aiResponse: document.getElementById('aiResponse'),
+            togglePreview: document.getElementById('togglePreview'),
             applyAIResponse: document.getElementById('applyAIResponse'),
             closeModal: document.getElementById('closeModal'),
             wysiwyg: document.getElementById('editor')
@@ -124,6 +125,11 @@ class XMLEditor {
         // Close modal with X button
         document.querySelector('.close').addEventListener('click', () => {
             this.closeModal();
+        });
+
+        // Toggle preview panel
+        this.elements.togglePreview.addEventListener('click', () => {
+            this.togglePreviewPanel();
         });
     }
 
@@ -210,6 +216,26 @@ class XMLEditor {
             this.currentXml = '';
             this.updatePreview();
             this.setStatus('Editor cleared');
+        }
+    }
+
+    togglePreviewPanel() {
+        const editorContainer = document.querySelector('.editor-container');
+        const previewPanel = document.querySelector('.preview-panel');
+        const toggleIcon = document.querySelector('.toggle-icon');
+        
+        if (previewPanel.classList.contains('collapsed')) {
+            // Expand preview
+            previewPanel.classList.remove('collapsed');
+            editorContainer.classList.remove('preview-collapsed');
+            toggleIcon.textContent = '◀';
+            this.setStatus('XML Preview expanded', 'success');
+        } else {
+            // Collapse preview
+            previewPanel.classList.add('collapsed');
+            editorContainer.classList.add('preview-collapsed');
+            toggleIcon.textContent = '▶';
+            this.setStatus('XML Preview collapsed - more space for editing', 'info');
         }
     }
 
@@ -331,13 +357,13 @@ class XMLEditor {
 
     loadXMLContent(xmlContent, title = '') {
         try {
+            if (!xmlContent) {
+                this.setStatus('No XML content to load', 'error');
+                return false;
+            }
+            
             this.currentXml = xmlContent;
             this.elements.xmlSource.value = xmlContent;
-            
-            // Set original content for revision tracking
-            if (this.revisionManager) {
-                this.revisionManager.setOriginalContent(xmlContent);
-            }
             
             // Convert XML to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
@@ -345,6 +371,14 @@ class XMLEditor {
             
             // Update preview
             this.updatePreview();
+            
+            // Set original content for revision tracking - after content is loaded
+            if (this.revisionManager) {
+                this.revisionManager.setOriginalContent(xmlContent);
+                
+                // Try multiple approaches to ensure revision refresh works
+                this.refreshRevisionsWithRetry();
+            }
             
             // Set status with document title
             const statusMessage = title ? `Loaded: ${title}` : 'XML content loaded';
@@ -356,6 +390,31 @@ class XMLEditor {
             this.setStatus(`Error loading XML: ${error.message}`, 'error');
             return false;
         }
+    }
+
+    refreshRevisionsWithRetry() {
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        const tryRefresh = () => {
+            attempts++;
+            console.log(`Revision refresh attempt ${attempts}/${maxAttempts}`);
+            
+            // Check if content is actually available
+            const currentContent = this.revisionManager.getCurrentXML();
+            if (currentContent && currentContent.trim().length > 0) {
+                console.log('Content available, refreshing revisions');
+                this.revisionManager.refreshRevisionsList();
+            } else if (attempts < maxAttempts) {
+                console.log('Content not ready, retrying in 100ms');
+                setTimeout(tryRefresh, 100);
+            } else {
+                console.log('Max attempts reached, giving up');
+            }
+        };
+        
+        // Start immediately, then retry if needed
+        tryRefresh();
     }
 
     setStatus(message, type = 'info') {
