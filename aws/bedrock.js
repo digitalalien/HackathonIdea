@@ -4,41 +4,29 @@ const { BedrockRuntimeClient, InvokeModelCommand } = require('@aws-sdk/client-be
 class BedrockAIClient {
     constructor() {
         this.client = new BedrockRuntimeClient({
-            region: process.env.AWS_REGION || 'us-east-1',
+            region: process.env.MODEL_REGION_NAME || process.env.AWS_REGION || 'us-east-1',
             credentials: {
                 accessKeyId: process.env.AWS_ACCESS_KEY_ID,
                 secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
             },
         });
         
-        this.model = process.env.AI_MODEL || 'anthropic.claude-3-sonnet-20240229-v1:0';
+        this.model = process.env.MODELID || 'us.meta.llama3-3-70b-instruct-v1:0';
     }
 
-    async invokeModel(prompt, context = '', options = {}) {
+    async invokeModel(prompt, options = {}) {
         const {
             maxTokens = 1000,
             temperature = 0.7,
-            systemPrompt = "You are a helpful AI assistant specializing in XML processing and editing."
         } = options;
 
         try {
-            // Construct the full prompt with context
-            const fullPrompt = context 
-                ? `Context:\n${context}\n\nUser Request: ${prompt}\n\nPlease provide a helpful response for this XML-related request.`
-                : `User Request: ${prompt}\n\nPlease provide a helpful response for this XML-related request.`;
-
-            // Prepare the request body for Claude model
+            // Prepare the request body for Llama model
             const requestBody = {
-                anthropic_version: "bedrock-2023-05-31",
-                max_tokens: maxTokens,
+                prompt: prompt,
+                max_gen_len: maxTokens,
                 temperature: temperature,
-                system: systemPrompt,
-                messages: [
-                    {
-                        role: "user",
-                        content: fullPrompt
-                    }
-                ]
+                top_p: 0.9
             };
 
             const command = new InvokeModelCommand({
@@ -53,16 +41,16 @@ class BedrockAIClient {
             
             // Parse the response
             const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-            const aiResponse = responseBody.content[0].text;
+            const aiResponse = responseBody.generation;
 
             return {
                 success: true,
                 response: aiResponse,
                 model: this.model,
                 usage: {
-                    prompt_tokens: responseBody.usage?.input_tokens || 0,
-                    completion_tokens: responseBody.usage?.output_tokens || 0,
-                    total_tokens: (responseBody.usage?.input_tokens || 0) + (responseBody.usage?.output_tokens || 0)
+                    prompt_tokens: responseBody.prompt_token_count || 0,
+                    completion_tokens: responseBody.generation_token_count || 0,
+                    total_tokens: (responseBody.prompt_token_count || 0) + (responseBody.generation_token_count || 0)
                 }
             };
 
@@ -79,7 +67,7 @@ class BedrockAIClient {
     getModelInfo() {
         return {
             model: this.model,
-            region: process.env.AWS_REGION || 'us-east-1',
+            region: process.env.MODEL_REGION_NAME || process.env.AWS_REGION || 'us-east-1',
             configured: this.isConfigured()
         };
     }
