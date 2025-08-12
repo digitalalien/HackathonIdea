@@ -51,8 +51,10 @@ app.post('/api/ai', async (req, res) => {
 
         // Select system prompt based on task
         let systemPrompt = '';
+
+        console.log(prompt);
         
-        switch (task) {
+        switch (prompt) {
             case 'xml_expert':
                 systemPrompt = prompts.getXMLExpertPrompt(context);
                 break;
@@ -67,6 +69,9 @@ app.post('/api/ai', async (req, res) => {
                 break;
             case 'xml_documentation':
                 systemPrompt = prompts.getXMLDocumentationPrompt(context);
+                break;
+            case 'xml_editor':
+                systemPrompt = prompts.getXMLEditorPrompt(context);
                 break;
             default:
                 systemPrompt = prompts.getXMLExpertPrompt(context); // Default to general XML expert
