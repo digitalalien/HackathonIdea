@@ -109,8 +109,7 @@ function showAIResponse(response) {
 
 document.getElementById('callAI').addEventListener('click', async () => {
      // Call local AI service
-    async function callLocalAI(prompt, xmlContext, config) {
-        
+    async function callLocalAI(prompt, xmlContext, config) { 
         try {
             let userQuestion = document.getElementById('aiPrompt').value.trim();
             console.log(userQuestion);
