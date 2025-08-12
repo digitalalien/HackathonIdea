@@ -96,12 +96,18 @@ class AIIntegration {
             const systemMessage = `You are an AI assistant helping with XML document editing and enhancement. 
             You can help with:
             - Improving XML structure and formatting
-            - Adding missing elements or attributes
+            - Adding missing elements or attributes  
             - Converting between different XML schemas
             - Validating and fixing XML syntax
             - Generating XML content based on descriptions
             
-            Always respond with valid XML when asked to modify XML content.`;
+            The XML documents you're working with use a specialized schema with elements like:
+            - <product> for document indexes with <topicRef> references
+            - <topic> for chapters with <title> and <para> elements
+            - <section> for definitions and subsections with <sectionRef> references
+            - Elements often have id, type, and documentRefId attributes
+            
+            Always respond with valid XML when asked to modify XML content and maintain the existing schema structure.`;
 
             const userMessage = config.includeContext 
                 ? `Current XML context:\n${xmlContext}\n\nUser request: ${prompt}`
