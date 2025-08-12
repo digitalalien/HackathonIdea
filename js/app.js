@@ -161,7 +161,8 @@ class XMLEditor {
         
         // Convert to HTML for WYSIWYG editor
         const htmlContent = this.xmlRenderer.xmlToHtml(sampleXml);
-        this.quill.root.innerHTML = htmlContent;
+        const delta = this.quill.clipboard.convert(htmlContent);
+        this.quill.setContents(delta);
         
         // Update preview
         this.updatePreview();
@@ -187,7 +188,7 @@ class XMLEditor {
     }
 
     updateXmlFromEditor() {
-        if (!this.isXmlView) {
+        if (this.isXmlView) {
             const htmlContent = this.quill.root.innerHTML;
             this.currentXml = this.xmlRenderer.htmlToXml(htmlContent);
             this.elements.xmlSource.value = this.currentXml;
@@ -196,10 +197,14 @@ class XMLEditor {
     }
 
     updateEditorFromXml() {
-        if (this.isXmlView) {
+        if (!this.isXmlView) {
             this.currentXml = this.elements.xmlSource.value;
             const htmlContent = this.xmlRenderer.xmlToHtml(this.currentXml);
-            this.quill.root.innerHTML = htmlContent;
+            
+            // Use Quill's clipboard API to properly convert HTML to Delta format
+            const delta = this.quill.clipboard.convert(htmlContent);
+            this.quill.setContents(delta);
+            
             this.updatePreview();
         }
     }
@@ -281,7 +286,8 @@ class XMLEditor {
             
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(text);
-            this.quill.root.innerHTML = htmlContent;
+            const delta = this.quill.clipboard.convert(htmlContent);
+            this.quill.setContents(delta);
             
             this.updatePreview();
             this.setStatus('XML imported successfully', 'success');
@@ -353,7 +359,8 @@ class XMLEditor {
             
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
-            this.quill.root.innerHTML = htmlContent;
+            const delta = this.quill.clipboard.convert(htmlContent);
+            this.quill.setContents(delta);
             
             this.updatePreview();
             this.setStatus('AI suggestions applied successfully', 'success');
@@ -383,7 +390,8 @@ class XMLEditor {
             
             // Convert XML to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
-            this.quill.root.innerHTML = htmlContent;
+            const delta = this.quill.clipboard.convert(htmlContent);
+            this.quill.setContents(delta);
             
             // Update preview
             this.updatePreview();
@@ -465,7 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Testing revision functionality...');
         // Make a small change to test
         const currentContent = window.xmlEditor.quill.root.innerHTML;
-        window.xmlEditor.quill.root.innerHTML = currentContent + '<p>Test change for revision</p>';
+        const newHtml = currentContent + '<p>Test change for revision</p>';
+        const delta = window.xmlEditor.quill.clipboard.convert(newHtml);
+        window.xmlEditor.quill.setContents(delta);
         window.xmlEditor.updateXmlFromEditor();
         console.log('Made test change. Click "Save with AI Revision" to test the revision system.');
     };

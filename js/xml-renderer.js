@@ -42,7 +42,8 @@ class XMLRenderer {
     xmlToHtml(xml) {
         try {
             // Handle specialized XML elements from the sample files
-        
+            //xml = xml.replace(/<\?xml[^?]*\?>/g,'')
+               
             let html = xml
                 .replace(/<\?xml[^>]*\?>/g, '') // Remove XML declaration
                 .replace(/<product[^>]*>/g, '<div class="product">')
@@ -50,7 +51,7 @@ class XMLRenderer {
                 .replace(/<frontMatter[^>]*>/g, '<header>')
                 .replace(/<\/frontMatter>/g, '</header>')
                 .replace(/<topic[^>]*>/g, '<div class="topic">')
-                .replace(/<\/topic>/g, '</div')
+                .replace(/<\/topic>/g, '</div>')
                 .replace(/<section[^>]*>/g, '<div class="section">')
                 .replace(/<\/section>/g, '</div>')
                 .replace(/<title[^>]*>/g, '<h1>')
@@ -80,12 +81,28 @@ class XMLRenderer {
                 .replace(/<\/italic>/g, '</em>')
                 .replace(/<list type="unordered">/g, '<ul>')
                 .replace(/<list type="ordered">/g, '<ol>')
-                .replace(/<\/list>/g, '</ul>')
+                .replace(/<\/list>/g, function(match, offset, string) {
+                    // Look backwards to find the opening list tag to determine if it's ul or ol
+                    const beforeMatch = string.substring(0, offset);
+                    const lastUlIndex = beforeMatch.lastIndexOf('<ul>');
+                    const lastOlIndex = beforeMatch.lastIndexOf('<ol>');
+                    const lastUlCloseIndex = beforeMatch.lastIndexOf('</ul>');
+                    const lastOlCloseIndex = beforeMatch.lastIndexOf('</ol>');
+                    
+                    // Determine which type of list is currently open
+                    if (lastUlIndex > lastOlIndex && lastUlIndex > lastUlCloseIndex) {
+                        return '</ul>';
+                    } else if (lastOlIndex > lastUlIndex && lastOlIndex > lastOlCloseIndex) {
+                        return '</ol>';
+                    } else {
+                        return '</ul>'; // Default to ul if unclear
+                    }
+                })
                 .replace(/<item>/g, '<li>')
                 .replace(/<\/item>/g, '</li>')
                 .replace(/<br\/>/g, '<br>');
-            
-            return html.trim();
+
+                return html.trim();
         } catch (error) {
             console.error('Error converting XML to HTML:', error);
             return xml;
