@@ -8,6 +8,10 @@ class XMLEditor {
         
         this.initializeEditor();
         this.setupEventListeners();
+        
+        // Initialize TOC Manager
+        this.tocManager = new TOCManager(this);
+        
         this.loadSampleContent();
     }
 
@@ -310,6 +314,30 @@ class XMLEditor {
         this.elements.aiModal.style.display = 'none';
         this.currentAIResponse = null;
         this.currentAIPrompt = null;
+    }
+
+    loadXMLContent(xmlContent, title = '') {
+        try {
+            this.currentXml = xmlContent;
+            this.elements.xmlSource.value = xmlContent;
+            
+            // Convert XML to HTML for WYSIWYG editor
+            const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
+            this.quill.root.innerHTML = htmlContent;
+            
+            // Update preview
+            this.updatePreview();
+            
+            // Set status with document title
+            const statusMessage = title ? `Loaded: ${title}` : 'XML content loaded';
+            this.setStatus(statusMessage, 'success');
+            
+            return true;
+        } catch (error) {
+            console.error('Error loading XML content:', error);
+            this.setStatus(`Error loading XML: ${error.message}`, 'error');
+            return false;
+        }
     }
 
     setStatus(message, type = 'info') {

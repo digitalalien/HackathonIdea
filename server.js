@@ -91,6 +91,112 @@ function generateEnhancementResponse(context) {
     const hasContext = context && context.length > 0;
     
     if (hasContext) {
+        // Detect document type from context
+        if (context.includes('<product')) {
+            return `I've analyzed your product index XML and here are some enhancements:
+
+\`\`\`xml
+<?xml version="1.0" encoding="UTF-8"?>
+<product xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         type="booklet" 
+         manualCode="Enhanced Package" 
+         manualNumber="1.0.0" 
+         version="2.0"
+         xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
+    <metadata>
+        <created>${new Date().toISOString()}</created>
+        <lastModified>${new Date().toISOString()}</lastModified>
+        <status>enhanced</status>
+    </metadata>
+    <frontMatter>
+        <title id="main-title">Enhanced Product Documentation</title>
+        <description>Comprehensive product documentation with improved structure</description>
+    </frontMatter>
+    <topicRef ref="introduction.xml" order="1" />
+    <topicRef ref="features.xml" order="2" />
+    <topicRef ref="examples.xml" order="3" />
+</product>
+\`\`\`
+
+Key improvements:
+- Added metadata section for tracking
+- Enhanced product attributes with version info
+- Added description in frontMatter
+- Included ordering for topic references`;
+
+        } else if (context.includes('<topic')) {
+            return `I've enhanced your topic XML with better structure:
+
+\`\`\`xml
+<?xml version="1.0" encoding="UTF-8"?>
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+       type="chapter" 
+       id="enhanced-topic"
+       documentRefId="enhanced-chapter"
+       xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
+    <metadata>
+        <created>${new Date().toISOString()}</created>
+        <author>Content Author</author>
+        <keywords>enhanced, topic, documentation</keywords>
+    </metadata>
+    <title id="chapter-title">Enhanced Chapter Title</title>
+    <abstract id="chapter-abstract">
+        <para>Brief overview of this chapter's content and objectives.</para>
+    </abstract>
+    <content>
+        <para id="intro-para">Enhanced introduction paragraph with better context and structure.</para>
+        <para id="detail-para">Detailed content with improved semantics and readability.</para>
+    </content>
+    <sectionRef ref="definitions.xml" type="supporting" />
+    <sectionRef ref="examples.xml" type="illustrative" />
+</topic>
+\`\`\`
+
+Enhancements include:
+- Added metadata section
+- Included abstract for better overview
+- Structured content in sections
+- Enhanced section references with types`;
+
+        } else if (context.includes('<section')) {
+            return `I've improved your section XML structure:
+
+\`\`\`xml
+<?xml version="1.0" encoding="UTF-8"?>
+<section xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         type="definition" 
+         id="enhanced-section"
+         category="technical"
+         xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
+    <header>
+        <title id="section-title">Enhanced Definition Section</title>
+        <summary>Comprehensive definition with examples and context</summary>
+    </header>
+    <content>
+        <para id="definition-para" type="primary">
+            Enhanced definition with clear, concise explanation and proper context.
+        </para>
+        <para id="example-para" type="example">
+            Practical example demonstrating the concept in real-world scenarios.
+        </para>
+        <para id="note-para" type="note">
+            Additional notes and considerations for better understanding.
+        </para>
+    </content>
+    <references>
+        <ref type="external" url="https://example.com">Related Documentation</ref>
+    </references>
+</section>
+\`\`\`
+
+Improvements:
+- Added header section with title and summary
+- Structured content with typed paragraphs
+- Added references section for external links
+- Enhanced attributes for better categorization`;
+        }
+
+        // Default enhancement for other XML
         return `I've analyzed your XML document and here are some enhancements:
 
 \`\`\`xml
@@ -128,6 +234,11 @@ Key improvements:
 3. **Include metadata** in a header section
 4. **Add attributes** for additional context
 5. **Use consistent naming conventions**
+
+For the specialized XML schema you're using, consider:
+- **Product documents**: Add metadata, version info, and ordered references
+- **Topic documents**: Include abstracts, structured content, and typed references  
+- **Section documents**: Add headers, typed paragraphs, and external references
 
 Please provide your XML content so I can give specific enhancement suggestions.`;
     }
