@@ -291,6 +291,12 @@ header p {
     font-size: 13px;
     line-height: 1.4;
 }
+.xml-preview title {
+  font-weight: bold;
+  font-size: large;
+  display: block;
+}
+
 
 .xml-element {
     color: #0066cc;
@@ -473,3 +479,5 @@ header p {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+

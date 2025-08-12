@@ -42,16 +42,17 @@ class XMLRenderer {
     xmlToHtml(xml) {
         try {
             // Handle specialized XML elements from the sample files
+        
             let html = xml
-                .replace(/<?xml[^>]*>/g, '') // Remove XML declaration
+                .replace(/<\?xml[^>]*\?>/g, '') // Remove XML declaration
                 .replace(/<product[^>]*>/g, '<div class="product">')
                 .replace(/<\/product>/g, '</div>')
                 .replace(/<frontMatter[^>]*>/g, '<header>')
                 .replace(/<\/frontMatter>/g, '</header>')
-                .replace(/<topic[^>]*>/g, '<article class="topic">')
-                .replace(/<\/topic>/g, '</article>')
-                .replace(/<section[^>]*>/g, '<section>')
-                .replace(/<\/section>/g, '</section>')
+                .replace(/<topic[^>]*>/g, '<div class="topic">')
+                .replace(/<\/topic>/g, '</div')
+                .replace(/<section[^>]*>/g, '<div class="section">')
+                .replace(/<\/section>/g, '</div>')
                 .replace(/<title[^>]*>/g, '<h1>')
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
@@ -73,7 +74,7 @@ class XMLRenderer {
                 .replace(/<item>/g, '<li>')
                 .replace(/<\/item>/g, '</li>')
                 .replace(/<br\/>/g, '<br>');
-
+            
             return html.trim();
         } catch (error) {
             console.error('Error converting XML to HTML:', error);
@@ -119,10 +120,11 @@ class XMLRenderer {
 
     // Add syntax highlighting to XML
     highlightXML(xml) {
-        return xml
-            .replace(/(&lt;)([^&]*?)(&gt;)/g, '<span class="xml-element">$1$2$3</span>')
-            .replace(/(\w+)=("[^"]*")/g, '<span class="xml-attribute">$1</span>=<span class="xml-attribute">$2</span>')
-            .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>');
+         return xml
+             .replace(/(&lt;)([^&]*?)(&gt;)/g, '<span class="xml-element">$1$2$3</span>')
+        //     .replace(/(\w+)=("[^"]*")/g, '<span class="xml-attribute">$1</span>=<span class="xml-attribute">$2</span>')
+             .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>');
+       // return xml;
     }
 
     // Pretty print XML
@@ -150,11 +152,13 @@ class XMLRenderer {
     // Render XML in preview panel
     renderPreview(xmlString, previewElement) {
         const validation = this.validateXML(xmlString);
+        xmlString = xmlString.replace(/<\?xml[^?]*\?>/g,'')
         
         if (validation.valid) {
             const formatted = this.formatXML(xmlString);
             previewElement.innerHTML = `<pre>${formatted}</pre>`;
         } else {
+           
             previewElement.innerHTML = `
                 <div class="validation-error">
                     <strong>XML Validation Error:</strong><br>
@@ -175,7 +179,7 @@ class XMLRenderer {
     // Create sample XML
     createSampleXML() {
         return `<?xml version="1.0" encoding="UTF-8"?>
-<document>
+<section>
     <title>Sample XML Document</title>
     <paragraph>This is a sample paragraph with <bold>bold text</bold> and <italic>italic text</italic>.</paragraph>
     <list type="unordered">
@@ -184,7 +188,7 @@ class XMLRenderer {
         <item>Third item</item>
     </list>
     <paragraph>You can edit this content using the WYSIWYG editor above.</paragraph>
-</document>`;
+</section>`;
     }
 }
 
