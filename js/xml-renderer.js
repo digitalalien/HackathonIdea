@@ -41,8 +41,24 @@ class XMLRenderer {
     // Convert XML to HTML for WYSIWYG display
     xmlToHtml(xml) {
         try {
+            // Handle specialized XML elements from the sample files
             let html = xml
                 .replace(/<?xml[^>]*>/g, '') // Remove XML declaration
+                .replace(/<product[^>]*>/g, '<div class="product">')
+                .replace(/<\/product>/g, '</div>')
+                .replace(/<frontMatter[^>]*>/g, '<header>')
+                .replace(/<\/frontMatter>/g, '</header>')
+                .replace(/<topic[^>]*>/g, '<article class="topic">')
+                .replace(/<\/topic>/g, '</article>')
+                .replace(/<section[^>]*>/g, '<section>')
+                .replace(/<\/section>/g, '</section>')
+                .replace(/<title[^>]*>/g, '<h1>')
+                .replace(/<\/title>/g, '</h1>')
+                .replace(/<para[^>]*>/g, '<p>')
+                .replace(/<\/para>/g, '</p>')
+                .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
+                .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
+                // Keep existing conversions for compatibility
                 .replace(/<document>/g, '')
                 .replace(/<\/document>/g, '')
                 .replace(/<paragraph>/g, '<p>')
@@ -53,7 +69,7 @@ class XMLRenderer {
                 .replace(/<\/italic>/g, '</em>')
                 .replace(/<list type="unordered">/g, '<ul>')
                 .replace(/<list type="ordered">/g, '<ol>')
-                .replace(/<\/list>/g, '</ul></ol>'.slice(0, -5)) // This is a simplified approach
+                .replace(/<\/list>/g, '</ul>')
                 .replace(/<item>/g, '<li>')
                 .replace(/<\/item>/g, '</li>')
                 .replace(/<br\/>/g, '<br>');
