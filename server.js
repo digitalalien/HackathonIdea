@@ -1,44 +1,100 @@
 // Simple Local AI Service Server
 // This is a basic server that simulates an AI service for development purposes
 // You can replace this with calls to your actual AI service (OpenAI, Anthropic, local LLM, etc.)
+require('dotenv').config(); // Load environment variables from .env file
 
 const express = require('express');
 const cors = require('cors');
+const awsBedrockClient = require('./aws/bedrock'); // Import the Bedrock AI client
+const prompts = require('./prompts'); // Import the prompts module
+
+const bedrockAIClient = new awsBedrockClient();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Simple wildcard CORS for local development
 app.use(cors());
-app.use(express.json());
+
+// Body parsing middleware - MUST come before route handlers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Add debug middleware to log requests
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+});
 
 // AI Service Endpoint
 app.post('/api/ai', async (req, res) => {
-    try {
-        const { prompt, context, maxTokens = 1000, temperature = 0.7, task } = req.body;
+    try {        
+        // Check if body exists
+        if (!req.body) {
+            return res.status(400).json({
+                success: false,
+                error: 'Request body is missing',
+                message: 'Please send a JSON body with prompt field'
+            });
+        }
+
+        const { prompt, context = '', maxTokens = 1000, temperature = 0.7, task } = req.body;
+        
+        // Check if prompt exists
+        if (!prompt) {
+            return res.status(400).json({
+                success: false,
+                error: 'Prompt is required',
+                message: 'Please provide a prompt field in the request body'
+            });
+        }
+
+        // Select system prompt based on task
+        let systemPrompt = '';
+        
+        switch (task) {
+            case 'xml_expert':
+                systemPrompt = prompts.getXMLExpertPrompt(context);
+                break;
+            case 'xml_analysis':
+                systemPrompt = prompts.getXMLAnalysisPrompt(context);
+                break;
+            case 'xml_change_analysis':
+                systemPrompt = prompts.getXMLChangeAnalysisPrompt(context);
+                break;
+            case 'xml_validation':
+                systemPrompt = prompts.getXMLValidationPrompt(context);
+                break;
+            case 'xml_documentation':
+                systemPrompt = prompts.getXMLDocumentationPrompt(context);
+                break;
+            default:
+                systemPrompt = prompts.getXMLExpertPrompt(context); // Default to general XML expert
+                break;
+        }
+
         
         console.log(`AI Request received:`);
-        console.log(`Task: ${task}`);
-        console.log(`Prompt: ${prompt}`);
+        console.log(`Context: ${context}`);
+        console.log(`User Prompt: ${prompt}`);
+        console.log(`System Prompt: ${systemPrompt.substring(0, 200)}...`);
         console.log(`Context length: ${context ? context.length : 0} chars`);
-        
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-        
-        // Mock AI responses based on prompt keywords
-        let response = generateMockResponse(prompt, context);
-        
+
+        const bedrockResponse = await bedrockAIClient.invokeModel(systemPrompt, context, {
+            maxTokens,
+            temperature,
+            task
+        });
+
+        console.log(`Bedrock AI Response:`, bedrockResponse);
+
         res.json({
             success: true,
-            response: response,
-            model: 'local-mock-ai',
-            usage: {
-                prompt_tokens: prompt.length / 4,
-                completion_tokens: response.length / 4,
-                total_tokens: (prompt.length + response.length) / 4
-            }
+            response: bedrockResponse.response,
+            model: bedrockResponse.model,
+            usage: bedrockResponse.usage
         });
-        
+
     } catch (error) {
         console.error('AI Service Error:', error);
         res.status(500).json({
@@ -48,707 +104,6 @@ app.post('/api/ai', async (req, res) => {
         });
     }
 });
-
-// Generate mock AI responses
-function generateMockResponse(prompt, context) {
-    const lowerPrompt = prompt.toLowerCase();
-    
-    // Check for change analysis requests
-    if (lowerPrompt.includes('compare') && lowerPrompt.includes('xml')) {
-        return generateChangeAnalysisResponse(prompt, context);
-    }
-    
-    // XML Enhancement
-    if (lowerPrompt.includes('enhance') || lowerPrompt.includes('improve')) {
-        return generateEnhancementResponse(context);
-    }
-    
-    // XML Validation
-    if (lowerPrompt.includes('validate') || lowerPrompt.includes('check')) {
-        return generateValidationResponse(context);
-    }
-    
-    // XML Generation
-    if (lowerPrompt.includes('create') || lowerPrompt.includes('generate')) {
-        return generateCreationResponse(prompt);
-    }
-    
-    // XML Conversion
-    if (lowerPrompt.includes('convert') || lowerPrompt.includes('transform')) {
-        return generateConversionResponse(context);
-    }
-    
-    // Add metadata
-    if (lowerPrompt.includes('metadata') || lowerPrompt.includes('attributes')) {
-        return generateMetadataResponse(context);
-    }
-    
-    // Revision comment generation
-    if (lowerPrompt.includes('revision comment') || lowerPrompt.includes('change analysis')) {
-        return generateRevisionCommentResponse(prompt, context);
-    }
-    
-    // Structure suggestions
-    if (lowerPrompt.includes('structure') || lowerPrompt.includes('organize')) {
-        return generateStructureResponse(context);
-    }
-    
-    // Default response
-    return generateDefaultResponse(prompt, context);
-}
-
-function generateChangeAnalysisResponse(prompt, context) {
-    // Extract original and current content from the prompt
-    const originalMatch = prompt.match(/ORIGINAL XML:\s*([\s\S]*?)\s*CURRENT XML:/);
-    const currentMatch = prompt.match(/CURRENT XML:\s*([\s\S]*?)(?:\s*Please analyze|$)/);
-    
-    const originalXML = originalMatch ? originalMatch[1].trim() : '';
-    const currentXML = currentMatch ? currentMatch[1].trim() : '';
-    
-    if (!originalXML || !currentXML) {
-        return 'Unable to perform comparison - both original and current XML content required.';
-    }
-    
-    // Perform intelligent analysis
-    const analysis = performIntelligentComparison(originalXML, currentXML);
-    
-    return `**INTELLIGENT CHANGE ANALYSIS**
-
-${analysis.summary}
-
-**DETAILED FINDINGS:**
-
-${analysis.details}
-
-**IMPACT ASSESSMENT:**
-${analysis.impact}
-
-**RECOMMENDED REVISION COMMENT:**
-"${analysis.recommendedComment}"`;
-}
-
-function performIntelligentComparison(originalXML, currentXML) {
-    // Simplified but intelligent comparison logic
-    const changes = {
-        contentChanges: [],
-        structureChanges: [],
-        attributeChanges: [],
-        safetyImpacts: [],
-        proceduralImpacts: []
-    };
-    
-    // Content analysis
-    if (currentXML.length > originalXML.length) {
-        const addedContent = findAddedContent(originalXML, currentXML);
-        changes.contentChanges.push(`Added: ${addedContent}`);
-        
-        if (addedContent.toLowerCase().includes('safety') || addedContent.toLowerCase().includes('caution') || addedContent.toLowerCase().includes('warning')) {
-            changes.safetyImpacts.push('New safety information added');
-        }
-    } else if (currentXML.length < originalXML.length) {
-        changes.contentChanges.push('Content was removed or simplified');
-    } else if (originalXML !== currentXML) {
-        changes.contentChanges.push('Content was modified while maintaining similar length');
-    }
-    
-    // Structure analysis
-    const originalElements = extractElementTypes(originalXML);
-    const currentElements = extractElementTypes(currentXML);
-    
-    const addedElements = currentElements.filter(elem => !originalElements.includes(elem));
-    const removedElements = originalElements.filter(elem => !currentElements.includes(elem));
-    
-    if (addedElements.length > 0) {
-        changes.structureChanges.push(`Added elements: ${addedElements.join(', ')}`);
-    }
-    if (removedElements.length > 0) {
-        changes.structureChanges.push(`Removed elements: ${removedElements.join(', ')}`);
-    }
-    
-    // Generate analysis summary
-    const summary = generateAnalysisSummary(changes);
-    const details = generateDetailedFindings(changes);
-    const impact = generateImpactAssessment(changes);
-    const recommendedComment = generateIntelligentRevisionComment(changes);
-    
-    return { summary, details, impact, recommendedComment };
-}
-
-function findAddedContent(original, current) {
-    // Simple content extraction for demonstration
-    const originalText = original.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    const currentText = current.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    
-    if (currentText.length > originalText.length) {
-        // Find the difference (simplified)
-        const words = currentText.split(' ');
-        const originalWords = originalText.split(' ');
-        
-        const newWords = words.filter((word, index) => index >= originalWords.length || word !== originalWords[index]);
-        return newWords.slice(0, 10).join(' ') + (newWords.length > 10 ? '...' : '');
-    }
-    
-    return 'new content';
-}
-
-function extractElementTypes(xml) {
-    const elementRegex = /<(\w+)[^>]*>/g;
-    const elements = [];
-    let match;
-    
-    while ((match = elementRegex.exec(xml)) !== null) {
-        if (!elements.includes(match[1])) {
-            elements.push(match[1]);
-        }
-    }
-    
-    return elements;
-}
-
-function generateAnalysisSummary(changes) {
-    const totalChanges = changes.contentChanges.length + changes.structureChanges.length + changes.attributeChanges.length;
-    
-    if (totalChanges === 0) {
-        return 'No significant changes detected between the original and current versions.';
-    }
-    
-    let summary = `Detected ${totalChanges} significant change${totalChanges > 1 ? 's' : ''} to the document. `;
-    
-    if (changes.safetyImpacts.length > 0) {
-        summary += 'IMPORTANT: Safety-related modifications identified. ';
-    }
-    
-    if (changes.proceduralImpacts.length > 0) {
-        summary += 'Procedural changes may affect operational workflows. ';
-    }
-    
-    return summary.trim();
-}
-
-function generateDetailedFindings(changes) {
-    let details = '';
-    
-    if (changes.contentChanges.length > 0) {
-        details += '📝 **Content Changes:**\n';
-        changes.contentChanges.forEach(change => {
-            details += `   • ${change}\n`;
-        });
-        details += '\n';
-    }
-    
-    if (changes.structureChanges.length > 0) {
-        details += '🏗️ **Structure Changes:**\n';
-        changes.structureChanges.forEach(change => {
-            details += `   • ${change}\n`;
-        });
-        details += '\n';
-    }
-    
-    if (changes.safetyImpacts.length > 0) {
-        details += '⚠️ **Safety Impacts:**\n';
-        changes.safetyImpacts.forEach(impact => {
-            details += `   • ${impact}\n`;
-        });
-        details += '\n';
-    }
-    
-    return details.trim() || 'No specific detailed findings to report.';
-}
-
-function generateImpactAssessment(changes) {
-    if (changes.safetyImpacts.length > 0) {
-        return 'HIGH IMPACT: Safety-related changes require immediate attention and proper communication to all users.';
-    } else if (changes.proceduralImpacts.length > 0) {
-        return 'MEDIUM IMPACT: Procedural changes may require training updates and workflow adjustments.';
-    } else if (changes.contentChanges.length > 0 || changes.structureChanges.length > 0) {
-        return 'LOW-MEDIUM IMPACT: Content updates improve documentation accuracy and usability.';
-    } else {
-        return 'MINIMAL IMPACT: Changes are primarily cosmetic or organizational.';
-    }
-}
-
-function generateIntelligentRevisionComment(changes) {
-    if (changes.safetyImpacts.length > 0) {
-        return 'Added critical safety warnings and updated procedural guidance for enhanced operational safety.';
-    } else if (changes.structureChanges.some(c => c.includes('Added elements'))) {
-        return 'Enhanced document structure with additional content sections for improved completeness.';
-    } else if (changes.contentChanges.some(c => c.includes('Added'))) {
-        return 'Updated content with additional technical information and operational guidance.';
-    } else if (changes.contentChanges.some(c => c.includes('modified'))) {
-        return 'Modified existing content to reflect current operational requirements and best practices.';
-    } else if (changes.contentChanges.some(c => c.includes('removed'))) {
-        return 'Removed obsolete information and streamlined content for improved clarity.';
-    } else {
-        return 'Updated documentation with improvements for enhanced accuracy and usability.';
-    }
-}
-
-function generateEnhancementResponse(context) {
-    const hasContext = context && context.length > 0;
-    
-    if (hasContext) {
-        // Detect document type from context
-        if (context.includes('<product')) {
-            return `I've analyzed your product index XML and here are some enhancements:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<product xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-         type="booklet" 
-         manualCode="Enhanced Package" 
-         manualNumber="1.0.0" 
-         version="2.0"
-         xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
-    <metadata>
-        <created>${new Date().toISOString()}</created>
-        <lastModified>${new Date().toISOString()}</lastModified>
-        <status>enhanced</status>
-    </metadata>
-    <frontMatter>
-        <title id="main-title">Enhanced Product Documentation</title>
-        <description>Comprehensive product documentation with improved structure</description>
-    </frontMatter>
-    <topicRef ref="introduction.xml" order="1" />
-    <topicRef ref="features.xml" order="2" />
-    <topicRef ref="examples.xml" order="3" />
-</product>
-\`\`\`
-
-Key improvements:
-- Added metadata section for tracking
-- Enhanced product attributes with version info
-- Added description in frontMatter
-- Included ordering for topic references`;
-
-        } else if (context.includes('<topic')) {
-            return `I've enhanced your topic XML with better structure:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-       type="chapter" 
-       id="enhanced-topic"
-       documentRefId="enhanced-chapter"
-       xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
-    <metadata>
-        <created>${new Date().toISOString()}</created>
-        <author>Content Author</author>
-        <keywords>enhanced, topic, documentation</keywords>
-    </metadata>
-    <title id="chapter-title">Enhanced Chapter Title</title>
-    <abstract id="chapter-abstract">
-        <para>Brief overview of this chapter's content and objectives.</para>
-    </abstract>
-    <content>
-        <para id="intro-para">Enhanced introduction paragraph with better context and structure.</para>
-        <para id="detail-para">Detailed content with improved semantics and readability.</para>
-    </content>
-    <sectionRef ref="definitions.xml" type="supporting" />
-    <sectionRef ref="examples.xml" type="illustrative" />
-</topic>
-\`\`\`
-
-Enhancements include:
-- Added metadata section
-- Included abstract for better overview
-- Structured content in sections
-- Enhanced section references with types`;
-
-        } else if (context.includes('<section')) {
-            return `I've improved your section XML structure:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<section xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-         type="definition" 
-         id="enhanced-section"
-         category="technical"
-         xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0">
-    <header>
-        <title id="section-title">Enhanced Definition Section</title>
-        <summary>Comprehensive definition with examples and context</summary>
-    </header>
-    <content>
-        <para id="definition-para" type="primary">
-            Enhanced definition with clear, concise explanation and proper context.
-        </para>
-        <para id="example-para" type="example">
-            Practical example demonstrating the concept in real-world scenarios.
-        </para>
-        <para id="note-para" type="note">
-            Additional notes and considerations for better understanding.
-        </para>
-    </content>
-    <references>
-        <ref type="external" url="https://example.com">Related Documentation</ref>
-    </references>
-</section>
-\`\`\`
-
-Improvements:
-- Added header section with title and summary
-- Structured content with typed paragraphs
-- Added references section for external links
-- Enhanced attributes for better categorization`;
-        }
-
-        // Default enhancement for other XML
-        return `I've analyzed your XML document and here are some enhancements:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<document xmlns:meta="http://metadata.org/2024">
-    <meta:header>
-        <meta:title>Enhanced Document</meta:title>
-        <meta:created>${new Date().toISOString()}</meta:created>
-        <meta:version>1.1</meta:version>
-    </meta:header>
-    <content>
-        <section id="main">
-            <heading level="1">Enhanced Content Structure</heading>
-            <paragraph style="enhanced">Your content has been restructured with better semantics and metadata.</paragraph>
-            <list type="enhanced-unordered">
-                <item priority="high">Added namespace declarations</item>
-                <item priority="medium">Improved element hierarchy</item>
-                <item priority="medium">Added semantic attributes</item>
-            </list>
-        </section>
-    </content>
-</document>
-\`\`\`
-
-Key improvements:
-- Added XML namespace for metadata
-- Enhanced semantic structure
-- Added attributes for better data organization
-- Included version control metadata`;
-    } else {
-        return `To enhance your XML, I recommend:
-
-1. **Add proper XML declaration** with encoding
-2. **Use semantic element names** that describe content
-3. **Include metadata** in a header section
-4. **Add attributes** for additional context
-5. **Use consistent naming conventions**
-
-For the specialized XML schema you're using, consider:
-- **Product documents**: Add metadata, version info, and ordered references
-- **Topic documents**: Include abstracts, structured content, and typed references  
-- **Section documents**: Add headers, typed paragraphs, and external references
-
-Please provide your XML content so I can give specific enhancement suggestions.`;
-    }
-}
-
-function generateValidationResponse(context) {
-    if (context && context.includes('<?xml')) {
-        return `✅ **XML Validation Results:**
-
-Your XML document appears to be well-formed! Here's my analysis:
-
-**Structure:** Good - proper XML declaration and root element
-**Syntax:** Valid - no parsing errors detected
-**Best Practices:** Consider these improvements:
-- Add a DOCTYPE declaration for better validation
-- Use consistent indentation (2 or 4 spaces)
-- Add comments for complex sections
-- Consider using XML Schema (XSD) for advanced validation
-
-**Recommendations:**
-- Your document follows XML 1.0 standards
-- Element nesting is proper
-- No unclosed tags detected`;
-    } else {
-        return `⚠️ **Validation Notes:**
-
-I need to see your XML content to perform a thorough validation. However, here are general XML validation tips:
-
-**Common Issues to Check:**
-- Proper XML declaration: \`<?xml version="1.0" encoding="UTF-8"?>\`
-- Single root element
-- Properly closed tags
-- Correct nesting order
-- Escaped special characters (&, <, >, ", ')
-
-Please share your XML for detailed validation.`;
-    }
-}
-
-function generateCreationResponse(prompt) {
-    const topic = extractTopic(prompt);
-    
-    return `Here's a sample XML structure for "${topic}":
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<${topic.replace(/\s+/g, '_').toLowerCase()}>
-    <metadata>
-        <title>${topic}</title>
-        <created_date>${new Date().toISOString().split('T')[0]}</created_date>
-        <author>AI Generated</author>
-    </metadata>
-    <content>
-        <section id="introduction">
-            <heading>Introduction</heading>
-            <paragraph>This is a sample ${topic} document structure.</paragraph>
-        </section>
-        <section id="main_content">
-            <heading>Main Content</heading>
-            <data_items>
-                <item id="1" type="primary">Sample item 1</item>
-                <item id="2" type="secondary">Sample item 2</item>
-            </data_items>
-        </section>
-    </content>
-</${topic.replace(/\s+/g, '_').toLowerCase()}>
-\`\`\`
-
-This structure includes:
-- Proper XML declaration
-- Metadata section for document information
-- Organized content sections
-- Semantic element names
-- Unique identifiers where appropriate`;
-}
-
-function generateConversionResponse(context) {
-    return `I can help convert your XML to different formats or structures. Here's an optimized version:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<document_v2>
-    <header>
-        <schema_version>2.0</schema_version>
-        <converted_date>${new Date().toISOString()}</converted_date>
-    </header>
-    <body>
-        <content_blocks>
-            <block type="text" id="block_1">
-                <content>Converted content with improved structure</content>
-                <attributes>
-                    <style>enhanced</style>
-                    <priority>normal</priority>
-                </attributes>
-            </block>
-        </content_blocks>
-    </body>
-</document_v2>
-\`\`\`
-
-**Conversion highlights:**
-- Modernized element structure
-- Added versioning information
-- Improved data organization
-- Enhanced metadata support`;
-}
-
-function generateMetadataResponse(context) {
-    return `Here's your XML enhanced with comprehensive metadata:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<document 
-    xmlns:dc="http://purl.org/dc/elements/1.1/"
-    xmlns:meta="http://example.com/metadata"
-    meta:version="1.0">
-    
-    <meta:metadata>
-        <dc:title>Enhanced Document with Metadata</dc:title>
-        <dc:creator>Content Author</dc:creator>
-        <dc:date>${new Date().toISOString()}</dc:date>
-        <dc:description>Document enhanced with Dublin Core metadata</dc:description>
-        <meta:document_id>${generateId()}</meta:document_id>
-        <meta:classification>standard</meta:classification>
-        <meta:keywords>xml, metadata, enhanced</meta:keywords>
-    </meta:metadata>
-    
-    <content meta:section="main">
-        <!-- Your existing content here with metadata attributes -->
-        <paragraph meta:importance="high" dc:created="${new Date().toISOString()}">
-            Enhanced paragraph with metadata attributes
-        </paragraph>
-    </content>
-</document>
-\`\`\`
-
-**Metadata additions:**
-- Dublin Core namespace for standard metadata
-- Custom metadata namespace
-- Document classification and keywords
-- Timestamped elements
-- Unique document identifier`;
-}
-
-function generateRevisionCommentResponse(prompt, context) {
-    // Extract key information from the prompt to understand what changed
-    const lowerPrompt = prompt.toLowerCase();
-    
-    if (lowerPrompt.includes('added') || lowerPrompt.includes('addition')) {
-        return generateRevisionComment('addition', prompt, context);
-    } else if (lowerPrompt.includes('removed') || lowerPrompt.includes('deleted')) {
-        return generateRevisionComment('deletion', prompt, context);
-    } else if (lowerPrompt.includes('modified') || lowerPrompt.includes('updated')) {
-        return generateRevisionComment('modification', prompt, context);
-    } else if (lowerPrompt.includes('corrected') || lowerPrompt.includes('fixed')) {
-        return generateRevisionComment('correction', prompt, context);
-    } else if (lowerPrompt.includes('reorganized') || lowerPrompt.includes('restructured')) {
-        return generateRevisionComment('reorganization', prompt, context);
-    } else {
-        return generateRevisionComment('general', prompt, context);
-    }
-}
-
-function generateRevisionComment(changeType, prompt, context) {
-    const templates = {
-        addition: [
-            "Added new safety warning for enhanced operational safety.",
-            "Included additional troubleshooting steps for improved maintenance guidance.",
-            "Added caution note to reflect updated manufacturer recommendations.",
-            "Incorporated new procedure steps based on latest technical specifications.",
-            "Added reference documentation for compliance requirements."
-        ],
-        deletion: [
-            "Removed obsolete procedure steps no longer applicable to current operations.",
-            "Deleted outdated safety warnings replaced by current guidelines.",
-            "Removed deprecated technical specifications per manufacturer update.",
-            "Eliminated redundant information for improved clarity.",
-            "Removed superseded maintenance procedures."
-        ],
-        modification: [
-            "Updated technical specifications to reflect latest manufacturer standards.",
-            "Modified safety procedures to align with current regulatory requirements.",
-            "Revised maintenance intervals based on operational experience.",
-            "Updated part numbers and specifications per latest OEM documentation.",
-            "Modified procedural steps for improved operational efficiency."
-        ],
-        correction: [
-            "Corrected technical specifications to match manufacturer documentation.",
-            "Fixed formatting inconsistencies throughout the manual.",
-            "Corrected cross-reference errors in procedural sections.",
-            "Fixed typographical errors and improved readability.",
-            "Corrected safety warning placement for better visibility."
-        ],
-        reorganization: [
-            "Reorganized content sections for improved logical flow and usability.",
-            "Restructured troubleshooting procedures for enhanced clarity.",
-            "Reordered safety warnings for better prominence and compliance.",
-            "Reorganized maintenance procedures by system for easier navigation.",
-            "Restructured content hierarchy for improved document organization."
-        ],
-        general: [
-            "Updated content to reflect current operational requirements.",
-            "Revised documentation for enhanced clarity and compliance.",
-            "Modified procedures based on operational feedback and best practices.",
-            "Updated manual content per latest technical review.",
-            "Improved content organization and technical accuracy."
-        ]
-    };
-    
-    const commentTemplates = templates[changeType] || templates.general;
-    const randomIndex = Math.floor(Math.random() * commentTemplates.length);
-    
-    return commentTemplates[randomIndex];
-}
-
-function generateStructureResponse(context) {
-    return `Here's a well-structured XML organization:
-
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<structured_document>
-    <!-- Document Header -->
-    <document_info>
-        <title>Well-Structured XML Document</title>
-        <version>1.0</version>
-        <last_modified>${new Date().toISOString()}</last_modified>
-    </document_info>
-    
-    <!-- Main Content Sections -->
-    <sections>
-        <section id="intro" level="1">
-            <title>Introduction</title>
-            <content>
-                <paragraph>Properly structured introduction content.</paragraph>
-            </content>
-        </section>
-        
-        <section id="main" level="1">
-            <title>Main Content</title>
-            <subsections>
-                <section id="main_sub1" level="2">
-                    <title>Subsection 1</title>
-                    <content>
-                        <list type="ordered">
-                            <item>First structured item</item>
-                            <item>Second structured item</item>
-                        </list>
-                    </content>
-                </section>
-            </subsections>
-        </section>
-    </sections>
-    
-    <!-- Document Footer -->
-    <document_footer>
-        <references/>
-        <appendices/>
-    </document_footer>
-</structured_document>
-\`\`\`
-
-**Structure benefits:**
-- Clear hierarchical organization
-- Consistent naming patterns
-- Logical content grouping
-- Proper nesting levels
-- Semantic element names`;
-}
-
-function generateDefaultResponse(prompt, context) {
-    return `I understand you want help with: "${prompt}"
-
-Based on XML best practices, I can assist with:
-
-🔧 **XML Enhancement:** Improve structure, formatting, and semantics
-📝 **Content Generation:** Create XML from descriptions
-✅ **Validation:** Check syntax and structure
-🔄 **Transformation:** Convert between formats
-📊 **Metadata:** Add proper document metadata
-🏗️ **Structure:** Organize content logically
-
-**Sample XML structure:**
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<your_document>
-    <header>
-        <title>Your Document Title</title>
-        <created>${new Date().toISOString().split('T')[0]}</created>
-    </header>
-    <content>
-        <section>
-            <heading>Your Content Here</heading>
-            <paragraph>Structured content...</paragraph>
-        </section>
-    </content>
-</your_document>
-\`\`\`
-
-Please provide more specific details about what you'd like me to help you with!`;
-}
-
-function extractTopic(prompt) {
-    // Simple topic extraction from prompt
-    const words = prompt.toLowerCase().split(' ');
-    const topicWords = words.filter(word => 
-        word.length > 3 && 
-        !['create', 'generate', 'make', 'build', 'for'].includes(word)
-    );
-    return topicWords.join(' ') || 'document';
-}
-
-function generateId() {
-    return 'doc_' + Math.random().toString(36).substr(2, 9);
-}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
