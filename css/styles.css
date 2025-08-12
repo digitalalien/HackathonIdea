@@ -458,6 +458,181 @@ header p {
     border-left: 4px solid #ffc107;
 }
 
+.revisions-section {
+    background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+    border: 2px solid #e17055;
+    border-radius: 6px;
+    padding: 15px;
+    margin: 10px 0;
+    position: relative;
+}
+
+.revisions-section::before {
+    content: "📝 REVISIONS";
+    position: absolute;
+    top: -12px;
+    left: 15px;
+    background: #e17055;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.revision {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    padding: 10px;
+    margin: 8px 0;
+    border-left: 4px solid #d63031;
+}
+
+.revision-number {
+    background: #74b9ff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.revision-date {
+    background: #00b894;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.revision-comment {
+    display: block;
+    margin-top: 5px;
+    font-style: italic;
+    color: #2d3436;
+}
+
+/* Revision Comment Styles */
+.revision-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.revision-details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: center;
+}
+
+.revision-details label {
+    font-weight: bold;
+    color: var(--dark-text);
+}
+
+.revision-details input {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.ai-analysis {
+    background: #e8f4fd;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--info-color);
+}
+
+.change-analysis {
+    background: white;
+    padding: 12px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+}
+
+.revision-comment-section {
+    margin-bottom: 20px;
+}
+
+.revision-comment-section h4 {
+    margin-bottom: 10px;
+    color: var(--dark-text);
+}
+
+.revision-comment-input {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.revision-element {
+    background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+    border-left: 4px solid #e17055;
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 4px;
+    position: relative;
+}
+
+.revision-element::before {
+    content: "📝 REVISION";
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: #e17055;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.revision-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    max-width: 300px;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.revision-tooltip.visible {
+    opacity: 1;
+}
+
+.btn-primary.save-revision {
+    background: linear-gradient(135deg, #74b9ff, #0984e3);
+    border: none;
+    font-weight: bold;
+}
+
+.btn-primary.save-revision:hover {
+    background: linear-gradient(135deg, #0984e3, #0770c3);
+}
+
 /* Loading Animation */
 .loading {
     display: inline-block;

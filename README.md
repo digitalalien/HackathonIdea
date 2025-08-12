@@ -10,6 +10,8 @@ A powerful web application that combines a WYSIWYG editor with XML rendering cap
 ✅ **XML Validation** - Built-in validation with error reporting
 💾 **Import/Export** - Load and save XML documents
 🤖 **AI Integration** - Ask AI to enhance, validate, or transform your XML
+💾 **AI Revision Comments** - Automatic revision comment generation with change analysis
+📋 **Table of Contents** - Load and manage multiple XML documents from ZIP files
 🎨 **Responsive Design** - Works on desktop and mobile devices
 
 ## Getting Started
@@ -83,6 +85,30 @@ A powerful web application that combines a WYSIWYG editor with XML rendering cap
 - **Import**: Click "Import XML" to load an existing XML file
 - **Clear**: Click "Clear" to start fresh (with confirmation)
 - **Validate**: Click "Validate XML" to check for errors
+
+### AI Revision Comments (NEW!)
+
+The application now includes automatic AI revision comment generation:
+
+1. **Make changes** to your XML document in the editor
+2. **Click "💾 Save with AI Revision"** to start the revision process
+3. **Review AI analysis** of your changes in the modal
+4. **Edit the revision comment** if needed (AI generates it automatically)
+5. **Save with revision** to add the revision metadata to your XML
+
+The AI analyzes what changed and generates professional revision comments like:
+- "Updated caution note under engine startup procedure to reflect new OEM guidance."
+- "Added safety warning for high-voltage components in maintenance section."
+- "Corrected torque specifications for wheel lug nuts based on manufacturer update."
+
+Revision comments appear in your XML as:
+```xml
+<Revision>
+  <RevisionNumber>3.2</RevisionNumber>
+  <RevisionDate>2025-08-12</RevisionDate>
+  <RevisionComment>Updated caution note under engine startup procedure to reflect new OEM guidance.</RevisionComment>
+</Revision>
+```
 
 ## AI Integration Details
 
