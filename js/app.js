@@ -16,6 +16,22 @@ class XMLEditor {
         this.revisionManager = new RevisionManager(this);
         
         this.loadSampleContent();
+        
+        // Initialize preview panel as collapsed by default
+        this.initializePreviewPanelCollapsed();
+    }
+
+    initializePreviewPanelCollapsed() {
+        const editorContainer = document.querySelector('.editor-container');
+        const previewPanel = document.querySelector('.preview-panel');
+        const toggleIcon = document.querySelector('.toggle-icon');
+        
+        // Set initial collapsed state
+        previewPanel.classList.add('collapsed');
+        editorContainer.classList.add('preview-collapsed');
+        toggleIcon.textContent = '▶';
+        
+        // Note: Don't set status here as it will be overridden by loadSampleContent
     }
 
     initializeEditor() {
@@ -149,7 +165,7 @@ class XMLEditor {
         
         // Update preview
         this.updatePreview();
-        this.setStatus('Sample content loaded');
+        this.setStatus('Sample content loaded - XML Preview collapsed for more editing space');
     }
 
     toggleView() {
