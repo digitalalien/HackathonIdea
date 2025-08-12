@@ -7,11 +7,13 @@
 >
     <title id="id-9b25de3a-cc2f-4882-d7c1-6bf9d16454d1">AI Sample 2</title>
     <para id="id-84ed7a68-a901-4bd3-8618-698ad00fa86e">
-        Build context-aware, reasoning applications with LangChain’s flexible abstractions and AI-first toolkits.
+        Build context-aware, reasoning applications with LangChain's flexible abstractions and AI-first toolkits.
     </para>
     
-    <revisionComment id="id-rev-001">
-        Added introductory paragraph to clarify LangChain’s use in AI-first applications.
-    </revisionComment>
+    <Revision>
+        <RevisionNumber>1.0</RevisionNumber>
+        <RevisionDate>2025-01-12</RevisionDate>
+        <RevisionComment>Added introductory paragraph to clarify LangChain's use in AI-first applications.</RevisionComment>
+    </Revision>
 
 </topic>
