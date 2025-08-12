@@ -234,6 +234,7 @@ header p {
     border-bottom: 1px solid var(--border-color);
     font-size: 12px;
     color: var(--secondary-color);
+    flex-shrink: 0; /* Don't shrink the document info */
 }
 
 .editor-container {
@@ -241,6 +242,13 @@ header p {
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     margin-bottom: 20px;
+    min-height: 600px; /* Ensure adequate height for scrolling */
+    max-height: 75vh; /* Limit to 75% of viewport height */
+    transition: grid-template-columns 0.3s ease;
+}
+
+.editor-container.preview-collapsed {
+    grid-template-columns: 1fr 50px; /* Editor takes full space, preview becomes narrow */
 }
 
 .editor-panel, .preview-panel {
@@ -248,6 +256,10 @@ header p {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+    max-height: 70vh; /* Limit height to 70% of viewport */
 }
 
 .editor-panel h3, .preview-panel h3 {
@@ -256,16 +268,76 @@ header p {
     padding: 15px;
     margin: 0;
     font-size: 1.1rem;
+    flex-shrink: 0; /* Don't shrink the header */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.preview-toggle-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+}
+
+.preview-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.toggle-icon {
+    transition: transform 0.3s ease;
+    font-weight: bold;
+}
+
+.preview-panel.collapsed {
+    overflow: hidden;
+}
+
+.preview-panel.collapsed .xml-preview {
+    display: none;
+}
+
+.preview-panel.collapsed h3 {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 15px 10px;
+    height: 100%;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.preview-panel.collapsed .preview-toggle-btn {
+    writing-mode: horizontal-tb;
+    margin-top: 10px;
+}
+
+.preview-panel.collapsed .toggle-icon {
+    transform: rotate(180deg);
 }
 
 .wysiwyg-editor {
-    height: 400px;
+    flex: 1;
     border: none;
+    min-height: 0; /* Important for flex children */
+    overflow: hidden; /* Let Quill handle its own scrolling */
+    display: flex;
+    flex-direction: column;
 }
 
 .xml-source {
     width: 100%;
-    height: 400px;
+    flex: 1;
     border: none;
     padding: 15px;
     font-family: 'Courier New', monospace;
@@ -274,14 +346,18 @@ header p {
     outline: none;
     display: none;
     background: #f8f9fa;
+    min-height: 0; /* Important for flex children */
+    overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .xml-preview {
-    height: 400px;
+    flex: 1;
     padding: 15px;
     overflow-y: auto;
     background: #f8f9fa;
     border-left: 3px solid var(--primary-color);
+    min-height: 0; /* Important for flex children */
+    scroll-behavior: smooth;
 }
 
 .xml-preview pre {
@@ -431,10 +507,16 @@ header p {
 /* Quill Editor Customization */
 .ql-container {
     font-size: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .ql-editor {
-    min-height: 300px;
+    min-height: 200px;
+    flex: 1;
+    overflow-y: auto !important;
+    max-height: none !important;
 }
 
 /* XML Document Styles */
@@ -655,4 +737,294 @@ header p {
     100% { transform: rotate(360deg); }
 }
 
+/* Revision Comments Panel */
+.revision-panel {
+    margin-top: 20px;
+    padding: 0;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
 
+.revision-panel h3 {
+    margin: 0;
+    padding: 15px 20px;
+    font-size: 1.1em;
+    color: #495057;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.revision-comments-list {
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.revision-comments-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.revision-comments-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.revision-comments-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.revision-comments-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.revision-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.revision-item:hover {
+    background: #e7f3ff;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,123,255,0.15);
+}
+
+.revision-item.selected {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+}
+
+.revision-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.revision-number {
+    font-weight: 600;
+    color: #007bff;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.revision-date {
+    font-size: 0.75em;
+    color: #6c757d;
+    background: rgba(108, 117, 125, 0.1);
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.revision-comment {
+    font-size: 0.8em;
+    color: #495057;
+    line-height: 1.4;
+    margin: 0;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.revision-controls {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.revision-controls .btn-small {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.75em;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #6c757d;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.revision-controls .btn-small:first-child {
+    border-right: 1px solid #dee2e6;
+}
+
+.revision-controls .btn-small:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.revision-controls .btn-small .icon {
+    font-size: 0.9em;
+    margin: 0;
+}
+
+.no-revisions {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 30px 20px;
+    margin: 0;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 2px dashed #dee2e6;
+}
+
+.revision-count {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 0.7em;
+    font-weight: 500;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
+}
+
+/* Enhanced revision highlighting in preview */
+.revision-element {
+    background: linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+    position: relative;
+    cursor: help;
+}
+
+.revision-element::before {
+    content: "📝";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ffc107;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.revision-tooltip {
+    position: absolute;
+    background: #333;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.85em;
+    max-width: 300px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.revision-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.revision-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid #333;
+}
+
+/* Animation for new revisions */
+@keyframes revisionAdded {
+    0% {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.revision-item.new {
+    animation: revisionAdded 0.3s ease-out;
+}
+
+/* Scrollbar styling for editor and preview areas */
+.wysiwyg-editor::-webkit-scrollbar,
+.xml-source::-webkit-scrollbar,
+.xml-preview::-webkit-scrollbar {
+    width: 8px;
+}
+
+.wysiwyg-editor::-webkit-scrollbar-track,
+.xml-source::-webkit-scrollbar-track,
+.xml-preview::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.wysiwyg-editor::-webkit-scrollbar-thumb,
+.xml-source::-webkit-scrollbar-thumb,
+.xml-preview::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.wysiwyg-editor::-webkit-scrollbar-thumb:hover,
+.xml-source::-webkit-scrollbar-thumb:hover,
+.xml-preview::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Ensure Quill editor scrolls properly */
+.ql-editor {
+    overflow-y: auto !important;
+    max-height: none !important;
+}
+
+.ql-container .ql-editor {
+    padding: 12px 15px;
+}
+
+.ql-toolbar {
+    flex-shrink: 0;
+}
+
+/* Revision highlight when selected from panel */
+.revision-highlight {
+    background: linear-gradient(120deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    border: 2px solid #2196f3 !important;
+    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}

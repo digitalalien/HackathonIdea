@@ -1,1 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?><topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="chapter" xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0" documentRefId="id-b1fd84a8-7588-4623-9783-7ac28504adcd"><title id="id-9b25de3a-cc2f-4882-d7c1-6bf9d16454d1">AI Sample 2</title><para id="id-84ed7a68-a901-4bd3-8618-698ad00fa86e">Build context-aware, reasoning applications with LangChain’s flexible abstractions and AI-first toolkits.</para></topic>
+<?xml version="1.0" encoding="UTF-8"?>
+<topic
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    type="chapter"
+    xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0"
+    documentRefId="id-b1fd84a8-7588-4623-9783-7ac28504adcd"
+>
+    <title id="id-9b25de3a-cc2f-4882-d7c1-6bf9d16454d1">AI Sample 2</title>
+    <para id="id-84ed7a68-a901-4bd3-8618-698ad00fa86e">
+        Build context-aware, reasoning applications with LangChain’s flexible abstractions and AI-first toolkits.
+    </para>
+    
+    <revisionComment id="id-rev-001">
+        Added introductory paragraph to clarify LangChain’s use in AI-first applications.
+    </revisionComment>
+
+</topic>

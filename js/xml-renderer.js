@@ -121,10 +121,22 @@ class XMLRenderer {
     formatXML(xmlString) {
         try {
             const doc = this.parser.parseFromString(xmlString, 'application/xml');
+            
+            // Check for parsing errors
+            const parseError = doc.querySelector('parsererror');
+            if (parseError) {
+                return this.escapeHtml(xmlString);
+            }
+            
             const formatted = this.serializer.serializeToString(doc);
-            return this.highlightXML(this.prettifyXML(formatted));
+            const prettified = this.prettifyXML(formatted);
+            const highlighted = this.highlightXML(prettified);
+            
+            return highlighted;
         } catch (error) {
-            return xmlString;
+            console.error('Error formatting XML:', error);
+            // Fall back to simple escaped HTML if formatting fails
+            return this.escapeHtml(xmlString);
         }
     }
 
@@ -165,6 +177,7 @@ class XMLRenderer {
         xmlString = xmlString.replace(/<\?xml[^?]*\?>/g,'')
         
         if (validation.valid) {
+            // Use the original formatXML approach but with better error handling
             const formatted = this.formatXML(xmlString);
             previewElement.innerHTML = `<pre>${formatted}</pre>`;
         } else {

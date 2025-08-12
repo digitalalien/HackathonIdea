@@ -43,6 +43,24 @@
                 <div id="tocContent" class="toc-content">
                     <p class="toc-empty">Click "Load Sample XMLs" to see available documents</p>
                 </div>
+                
+                <!-- Revision Comments Section -->
+                <div class="revision-panel">
+                    <h3>Revision Comments</h3>
+                    <div id="revisionCommentsList" class="revision-comments-list">
+                        <p class="no-revisions">No revision comments found in current document</p>
+                    </div>
+                    <div class="revision-controls">
+                        <button id="refreshRevisions" class="btn btn-secondary btn-small">
+                            <span class="icon">🔄</span>
+                            Refresh
+                        </button>
+                        <button id="exportRevisions" class="btn btn-secondary btn-small">
+                            <span class="icon">📋</span>
+                            Export
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="editor-container">
@@ -56,7 +74,12 @@
                 </div>
                 
                 <div class="preview-panel">
-                    <h3>XML Preview</h3>
+                    <h3>
+                        XML Preview
+                        <button id="togglePreview" class="preview-toggle-btn" title="Collapse/Expand Preview">
+                            <span class="toggle-icon">◀</span>
+                        </button>
+                    </h3>
                     <div id="xmlPreview" class="xml-preview"></div>
                 </div>
             </div>
