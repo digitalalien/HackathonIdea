@@ -10,8 +10,8 @@ class XMLRenderer {
         try {
             // Enhanced HTML to XML conversion with revisionComment support
             let xml = html
-                // Convert hidden revision comments back to XML elements
-                .replace(/<!--\s*REVISION_COMMENT([^:]*?):\s*([^-]*?)\s*-->/g, '<revisionComment$1>$2</revisionComment>')
+                // Convert revision comment divs back to XML elements
+                .replace(/<div class="revision-comment"[^>]*data-xml-element="revisionComment"[^>]*data-attributes="([^"]*)"[^>]*>💬 Revision:\s*([^<]*)<\/div>/g, '<revisionComment$1>$2</revisionComment>')
                 
                 // Standard conversions
                 .replace(/<h1[^>]*>/g, '<title>')
@@ -67,8 +67,8 @@ class XMLRenderer {
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
                 .replace(/<\/para>/g, '</p>')
-                // IMPORTANT: Hide revisionComment from WYSIWYG editor - convert to hidden comment
-                .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<!-- REVISION_COMMENT$1: $2 -->')
+                // IMPORTANT: Convert revisionComment to custom Quill blot format
+                .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<div class="revision-comment" data-xml-element="revisionComment" data-attributes="$1">💬 Revision: $2</div>')
                 .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
                 .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
                 .replace(/<Revisions[^>]*>/g, '<div class="revisions-section">')
@@ -205,8 +205,15 @@ class XMLRenderer {
         xmlString = xmlString.replace(/<\?xml[^?]*\?>/g,'')
         
         if (validation.valid) {
-            // Use the original formatXML approach but with better error handling
-            const formatted = this.formatXML(xmlString);
+            // Format XML and highlight revision comments
+            let formatted = this.formatXML(xmlString);
+            
+            // Add HTML styling to revision comments for better visibility in preview
+            formatted = formatted.replace(
+                /<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, 
+                '<span class="xml-revision-comment">&lt;revisionComment$1&gt;<span class="revision-content">$2</span>&lt;/revisionComment&gt;</span>'
+            );
+            
             previewElement.innerHTML = `<pre>${formatted}</pre>`;
         } else {
            

@@ -391,6 +391,25 @@ header p {
     font-style: italic;
 }
 
+/* Styling for revision comments in XML preview */
+.xml-revision-comment {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 2px 4px;
+    margin: 2px 0;
+    display: inline-block;
+    border-radius: 3px;
+    color: #856404;
+}
+
+.xml-revision-comment .revision-content {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 1px 3px;
+    border-radius: 2px;
+    font-weight: bold;
+}
+
 .status-bar {
     background: white;
     padding: 10px 15px;
@@ -1049,16 +1068,9 @@ header p {
     color: #f39c12;
 }
 
-/* Ensure XML elements maintain their styling in the editor */
+/* Hide revision comments in the WYSIWYG editor */
 .ql-editor .revision-comment {
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin: 8px 0;
-    font-style: italic;
-    color: #856404;
-    border-left: 4px solid #f39c12;
+    display: none !important;
 }
 
 .ql-editor .topic {

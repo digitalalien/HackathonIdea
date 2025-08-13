@@ -4,7 +4,7 @@ class XMLEditor {
     constructor() {
         this.xmlRenderer = new XMLRenderer();
         this.aiIntegration = new AIIntegration();
-        this.isXmlView = false;
+        this.isXmlView = true; // Default to XML view mode
         this.currentXml = '';
 
         this.initializeEditor();
@@ -17,6 +17,9 @@ class XMLEditor {
         this.revisionManager = new RevisionManager(this);
 
         this.loadSampleContent();
+        
+        // Set initial view state to XML mode
+        this.setInitialViewState();
     }
 
     initializeEditor() {
@@ -219,7 +222,8 @@ class XMLEditor {
     }
 
     updateXmlFromEditor() {
-        if (this.isXmlView) {
+        if (!this.isXmlView) {
+            // We're in WYSIWYG mode, so convert editor content to XML
             const htmlContent = this.quill.root.innerHTML;
             this.currentXml = this.xmlRenderer.htmlToXml(htmlContent);
             this.elements.xmlSource.value = this.currentXml;
@@ -228,16 +232,17 @@ class XMLEditor {
     }
 
     updateEditorFromXml() {
+        this.currentXml = this.elements.xmlSource.value;
+        
         if (!this.isXmlView) {
-            this.currentXml = this.elements.xmlSource.value;
+            // Only update the WYSIWYG editor if we're in WYSIWYG mode
             const htmlContent = this.xmlRenderer.xmlToHtml(this.currentXml);
-
-            // Use Quill's clipboard API to properly convert HTML to Delta format
             const delta = this.quill.clipboard.convert(htmlContent);
             this.quill.setContents(delta);
-
-            this.updatePreview();
         }
+        
+        // Always update the preview regardless of current view mode
+        this.updatePreview();
     }
 
     updatePreview() {
@@ -374,13 +379,8 @@ class XMLEditor {
                 this.revisionManager.setOriginalContent(xmlContent);
             }
 
-            // If we're currently in XML view, switch to WYSIWYG to show the changes
-            if (this.isXmlView) {
-                this.toggleView();
-                this.setStatus('AI response applied - switched to WYSIWYG view to show changes', 'success');
-            } else {
-                this.setStatus('AI response applied successfully - XML content updated', 'success');
-            }
+            // Stay in current view mode - don't force switch to WYSIWYG
+            this.setStatus('AI response applied successfully - XML content updated', 'success');
 
             console.log("Closing Modal");
             this.closeModal();
@@ -474,6 +474,13 @@ class XMLEditor {
                 this.elements.statusMessage.className = '';
             }
         }, 5000);
+    }
+
+    setInitialViewState() {
+        // Set up initial XML view state
+        this.elements.wysiwyg.style.display = 'none';
+        this.elements.xmlSource.style.display = 'block';
+        this.elements.toggleView.textContent = 'Switch to WYSIWYG View';
     }
 }
 
