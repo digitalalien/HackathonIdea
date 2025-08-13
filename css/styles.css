@@ -505,6 +505,63 @@ header p {
     box-shadow: 0 2px 4px rgba(243, 156, 18, 0.2);
 }
 
+/* New structured revision comment styles */
+.html-preview-content .revision-comment-structured {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #6c757d;
+    border-radius: 12px;
+    margin: 20px 0;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.html-preview-content .revision-header {
+    background: linear-gradient(135deg, #495057, #6c757d);
+    color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+}
+
+.html-preview-content .revision-icon {
+    font-size: 1.2em;
+}
+
+.html-preview-content .revision-title {
+    flex-grow: 1;
+    font-size: 1.1em;
+}
+
+.html-preview-content .revision-date {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+.html-preview-content .revision-content {
+    padding: 16px;
+}
+
+.html-preview-content .revision-text {
+    color: #495057;
+    line-height: 1.6;
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+}
+
+.html-preview-content .revision-author {
+    color: #6c757d;
+    font-size: 0.9em;
+    font-style: italic;
+    margin: 8px 0 0 0;
+    text-align: right;
+}
+
 .html-preview-content .revision-comment::before {
     content: "💬 ";
     font-style: normal;
@@ -1247,4 +1304,41 @@ header p {
     border-bottom: 2px solid #007bff;
     padding-bottom: 4px;
     margin-bottom: 8px;
+}
+
+/* Revision comment table styling */
+.revision-comment-table {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.revision-comment-table h4 {
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.revision-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.revision-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+
+.revision-table td:first-child {
+    width: 25%;
+    background: #e9ecef;
+    font-weight: 500;
+}
+
+.revision-table tr:last-child td {
+    border-bottom: none;
 }

@@ -52,6 +52,8 @@ class XMLRenderer {
         try {
             // Handle specialized XML elements from the sample files
             //xml = xml.replace(/<\?xml[^?]*\?>/g,'')
+            
+            console.log('XML to HTML input:', xml.substring(0, 500));
                
             let html = xml
                 .replace(/<\?xml[^>]*\?>/g, '') // Remove XML declaration
@@ -67,7 +69,84 @@ class XMLRenderer {
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
                 .replace(/<\/para>/g, '</p>')
-                // IMPORTANT: Convert revisionComment to custom Quill blot format
+                // Handle structured revision comments - convert to simple table
+                .replace(/<revisionComment[^>]*>\s*([\s\S]*?)\s*<\/revisionComment>/gi, (match, content) => {
+                    console.log('Found revisionComment, converting to table');
+                    console.log('Full match:', match);
+                    console.log('Content inside:', content);
+                    
+                    // Extract all the nested elements and their text content
+                    let revisionNumber = '';
+                    let revisionDate = '';
+                    let revisionCommentText = '';
+                    let revisedBy = '';
+                    
+                    // Try different patterns to extract the data
+                    const patterns = {
+                        number: [
+                            /<revisionNumber[^>]*>([^<]+)<\/revisionNumber>/i,
+                            /<revisionNumber>([^<]+)<\/revisionNumber>/i
+                        ],
+                        date: [
+                            /<revisionDate[^>]*>([^<]+)<\/revisionDate>/i,
+                            /<revisionDate>([^<]+)<\/revisionDate>/i
+                        ],
+                        comment: [
+                            /<revisionComment[^>]*>([^<]+)<\/revisionComment>/i,
+                            /<revisionComment>([^<]+)<\/revisionComment>/i
+                        ],
+                        by: [
+                            /<revisedBy[^>]*>([^<]+)<\/revisedBy>/i,
+                            /<revisedBy>([^<]+)<\/revisedBy>/i
+                        ]
+                    };
+                    
+                    // Try each pattern
+                    for (let pattern of patterns.number) {
+                        const match = content.match(pattern);
+                        if (match) {
+                            revisionNumber = match[1].trim();
+                            break;
+                        }
+                    }
+                    
+                    for (let pattern of patterns.date) {
+                        const match = content.match(pattern);
+                        if (match) {
+                            revisionDate = match[1].trim();
+                            break;
+                        }
+                    }
+                    
+                    for (let pattern of patterns.comment) {
+                        const match = content.match(pattern);
+                        if (match) {
+                            revisionCommentText = match[1].trim();
+                            break;
+                        }
+                    }
+                    
+                    for (let pattern of patterns.by) {
+                        const match = content.match(pattern);
+                        if (match) {
+                            revisedBy = match[1].trim();
+                            break;
+                        }
+                    }
+                    
+                    console.log('Extracted:', { revisionNumber, revisionDate, revisionCommentText, revisedBy });
+                    
+                    return `<div class="revision-comment-table" data-xml-element="revisionComment">
+                        <h4>📝 Revision Comment</h4>
+                        <table class="revision-table">
+                            <tr><td><strong>Revision:</strong></td><td>${revisionNumber || 'N/A'}</td></tr>
+                            <tr><td><strong>Date:</strong></td><td>${revisionDate || 'N/A'}</td></tr>
+                            <tr><td><strong>Comment:</strong></td><td>${revisionCommentText || 'N/A'}</td></tr>
+                            <tr><td><strong>Revised By:</strong></td><td>${revisedBy || 'N/A'}</td></tr>
+                        </table>
+                    </div>`;
+                })
+                // Fallback: Handle simple revisionComment elements (legacy format)
                 .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<div class="revision-comment" data-xml-element="revisionComment" data-attributes="$1">💬 Revision: $2</div>')
                 .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
                 .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
@@ -79,8 +158,47 @@ class XMLRenderer {
                 .replace(/<\/RevisionNumber>/g, '</span>')
                 .replace(/<RevisionDate[^>]*>/g, '<span class="revision-date">Date: ')
                 .replace(/<\/RevisionDate>/g, '</span>')
-                .replace(/<RevisionComment[^>]*>/g, '<span class="revision-comment">Comment: ')
-                .replace(/<\/RevisionComment>/g, '</span>')
+                // Handle RevisionComment with structured content
+                .replace(/<RevisionComment[^>]*>([\s\S]*?)<\/RevisionComment>/g, (match, content) => {
+                    console.log('Found RevisionComment:', content);
+                    
+                    // Decode HTML entities first
+                    const decoded = content
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&amp;/g, '&')
+                        .trim();
+                    
+                    console.log('Decoded content:', decoded);
+                    
+                    // Extract structured data from the decoded XML
+                    let revisionNumber = '';
+                    let revisionDate = '';
+                    let revisionCommentText = '';
+                    let revisedBy = '';
+                    
+                    const numberMatch = decoded.match(/<revisionNumber[^>]*>([^<]+)<\/revisionNumber>/i);
+                    const dateMatch = decoded.match(/<revisionDate[^>]*>([^<]+)<\/revisionDate>/i);
+                    const commentMatch = decoded.match(/<revisionComment[^>]*>([^<]+)<\/revisionComment>/i);
+                    const byMatch = decoded.match(/<revisedBy[^>]*>([^<]+)<\/revisedBy>/i);
+                    
+                    if (numberMatch) revisionNumber = numberMatch[1].trim();
+                    if (dateMatch) revisionDate = dateMatch[1].trim();
+                    if (commentMatch) revisionCommentText = commentMatch[1].trim();
+                    if (byMatch) revisedBy = byMatch[1].trim();
+                    
+                    console.log('Final extracted:', { revisionNumber, revisionDate, revisionCommentText, revisedBy });
+                    
+                    return `<div class="revision-comment-table">
+                        <h4>📝 Revision Comment</h4>
+                        <table class="revision-table">
+                            <tr><td><strong>Revision:</strong></td><td>${revisionNumber || 'N/A'}</td></tr>
+                            <tr><td><strong>Date:</strong></td><td>${revisionDate || 'N/A'}</td></tr>
+                            <tr><td><strong>Comment:</strong></td><td>${revisionCommentText || 'N/A'}</td></tr>
+                            <tr><td><strong>Revised By:</strong></td><td>${revisedBy || 'N/A'}</td></tr>
+                        </table>
+                    </div>`;
+                })
                 // Keep existing conversions for compatibility
                 .replace(/<document>/g, '')
                 .replace(/<\/document>/g, '')

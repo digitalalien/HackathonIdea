@@ -38,7 +38,7 @@ app.post('/api/ai', async (req, res) => {
             });
         }
 
-        const { prompt, context = '', maxTokens = 1000, temperature = 0.7 } = req.body;
+        const { prompt, context = '', maxTokens = 1000, temperature = 0.7, structuredOutput = false } = req.body;
 
         // Check if prompt exists
         if (!prompt) {
@@ -82,6 +82,10 @@ app.post('/api/ai', async (req, res) => {
             case 'xml_revision_comment':
                 systemPrompt = prompts.getXMLRevisionCommentPrompt(context);
                 break;  
+            case 'xml_revision_content':
+                systemPrompt = prompts.getXMLRevisionStructure(context);
+                structuredOutputCall = true;
+                break;
             default:
                 systemPrompt = prompts.getXMLExpertPrompt(context); // Default to general XML expert
                 break;
@@ -93,8 +97,9 @@ app.post('/api/ai', async (req, res) => {
         console.log(`User Prompt: ${prompt}`);
         console.log(`System Prompt: ${systemPrompt.substring(0, 200)}...`);
         console.log(`Context length: ${context ? context.length : 0} chars`);
+        console.log(`Structured Output Call: ${structuredOutputCall}`);
 
-        const bedrockResponse = structuredOutputCall
+        const bedrockResponse = (structuredOutputCall || structuredOutput)
             ? await bedrockAIClient.invokeModelWithXmlStructuredOutput(systemPrompt, context, {
                 maxTokens,
                 temperature
