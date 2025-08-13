@@ -75,16 +75,49 @@ function escapeXml(str) {
         .replace(/'/g, '&#39;');
 }
 
+function markdownToHtml(markdown) {
+    if (!markdown) return '';
+
+    return markdown
+        // Bold text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Italic text
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Headers
+        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+        // Line breaks
+        .replace(/\n/g, '<br>')
+        // Code inline
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
 // Helper function to show AI response
-function showAIResponse(response) {
+function showAIResponse(response, summary) {
     const aiModal = document.getElementById('aiModal');
     const aiResponse = document.getElementById('aiResponse');
 
+    // Store the response on the global xmlEditor instance
+    if (window.xmlEditor) {
+        window.xmlEditor.currentAIResponse = response;
+    }
+
+    console.log("XML Content Response: " + response);
     if (aiModal && aiResponse) {
-        aiResponse.innerHTML = `<pre>${escapeXml(response)}</pre>`;
+
+        aiResponse.innerHTML = `
+            <div class="ai-xml-response">
+                <h4 style="margin-bottom: 0.5em; color: #555;">XML Proposal:</h4>
+                <pre style="background-color: #f5f5f5; padding: 1em; border-radius: 4px; overflow-x: auto; border: 1px solid #ddd;"><code class="language-xml">${escapeXml(response)}</code></pre>
+            </div>
+            <div class="ai-summary" style="margin-bottom: 1.5em; line-height: 1.6; color: #333;">
+                ${summary}
+            </div>
+        `;
         aiModal.style.display = 'block';
     } else {
-        alert('AI Response: ' + response);
+        alert('AI Response: ' + summary + '\n\n' + response);
     }
 }
 
@@ -96,7 +129,6 @@ async function executeAIApiCall(prompt, context) {
         temperature: 0.7,
     };
 
-    console.log('AI API Request Payload:', payload);
 
     const response = await fetch('http://localhost:3001/api/ai', {
         method: 'POST',
@@ -105,8 +137,6 @@ async function executeAIApiCall(prompt, context) {
         },
         body: JSON.stringify(payload)
     });
-
-    console.log('AI API Response Status:', response.status);
 
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -154,8 +184,9 @@ document.getElementById('callAI').addEventListener('click', async () => {
             const responseData = response.response;
             const newEditContext = `${responseData}\n${xmlContent}`;
             const editResponse = await getXmlContentEdits(newEditContext);
-            console.log(editResponse);
-            showAIResponse(editResponse.response);
+            const summaryResult = await executeAIApiCall('xml_change_analysis', responseData);
+            const summary = summaryResult.response;
+            showAIResponse(editResponse.response, summary);
         } else {
             alert('AI request failed: ' + response.error);
         }

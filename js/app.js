@@ -116,6 +116,7 @@ class XMLEditor {
         });
 
         this.elements.applyAIResponse.addEventListener('click', () => {
+            console.log('ApplyAIResponse event listener clicked');
             this.applyAIResponse();
         });
 
@@ -283,82 +284,72 @@ class XMLEditor {
             this.setStatus(`Import error: ${error.message}`, 'error');
         }
     }
+    // ...existing code...
 
-    async callAI() {
-        const prompt = this.elements.aiPrompt.value.trim();
-        if (!prompt) {
-            this.setStatus('Please enter a prompt for the AI', 'error');
+    applyAIResponse() {
+        console.log('Applying AI response...');
+        console.log('Current AI Response:', this.currentAIResponse);
+        console.log('Window xmlEditor currentAIResponse:', window.xmlEditor.currentAIResponse);
+
+        // Pull from window.xmlEditor.currentAIResponse instead of this.currentAIResponse
+        const aiResponse = window.xmlEditor.currentAIResponse || this.currentAIResponse;
+
+        if (!aiResponse) {
+            console.log('No AI response available');
             return;
         }
 
-        // Show loading state
-        const originalText = this.elements.callAI.textContent;
-        this.elements.callAI.innerHTML = '<span class="loading"></span> Thinking...';
-        this.elements.callAI.disabled = true;
-
         try {
-            const xmlContext = this.isXmlView ? this.elements.xmlSource.value : this.currentXml;
+            // The AI response should already be the XML content we want to apply
+            const xmlContent = aiResponse;
+            console.log('XML Content to apply:', xmlContent);
 
-            // Try local AI first, then fallback to mock service
-            let result;
-            try {
-                result = await this.aiIntegration.callAI(prompt, xmlContext);
-            } catch (error) {
-                console.log('Using mock AI service for demonstration');
-                result = await MockAIService.handleRequest(prompt, xmlContext);
-            }
-
-            if (result.success) {
-                this.showAIResponse(result.response, prompt);
-                this.setStatus(`AI response received (${result.model || 'unknown'})`, 'success');
-            } else {
-                this.setStatus(`AI Error: ${result.error}`, 'error');
-                if (result.suggestion) {
-                    this.setStatus(`${result.error} ${result.suggestion}`, 'error');
-                }
-            }
-        } catch (error) {
-            this.setStatus(`AI call failed: ${error.message}`, 'error');
-        } finally {
-            // Restore button state
-            this.elements.callAI.textContent = originalText;
-            this.elements.callAI.disabled = false;
-            this.elements.aiPrompt.value = '';
-        }
-    }
-
-    showAIResponse(response, originalPrompt) {
-        this.elements.aiResponse.textContent = response;
-        this.currentAIResponse = response;
-        this.currentAIPrompt = originalPrompt;
-        this.elements.aiModal.style.display = 'block';
-    }
-
-    applyAIResponse() {
-        if (!this.currentAIResponse) return;
-
-        // Try to extract XML from the AI response
-        const xmlContent = this.aiIntegration.extractXMLFromResponse(this.currentAIResponse);
-
-        if (xmlContent) {
-            // Apply the extracted XML
+            // Update the current XML content
             this.currentXml = xmlContent;
             this.elements.xmlSource.value = xmlContent;
 
-            // Convert to HTML for WYSIWYG editor
+            // Convert XML to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
+            console.log('Converted HTML content:', htmlContent);
+
+            // Clear the editor first, then set new content
+            this.quill.setText(''); // Clear existing content
+
+            // Convert HTML to Delta and set content
             const delta = this.quill.clipboard.convert(htmlContent);
-            this.quill.setContents(delta);
+            console.log('Delta object:', delta);
 
+            this.quill.setContents(delta, 'api'); // Use 'api' source to prevent triggering change events
+
+            // Force a refresh of the editor
+            this.quill.update();
+
+            // Update the preview
             this.updatePreview();
-            this.setStatus('AI suggestions applied successfully', 'success');
-        } else {
-            // If no XML found, treat as general advice
-            this.setStatus('AI response applied as guidance', 'info');
-        }
 
-        this.closeModal();
+            // Update revision tracking if available
+            if (this.revisionManager) {
+                this.revisionManager.setOriginalContent(xmlContent);
+            }
+
+            // If we're currently in XML view, switch to WYSIWYG to show the changes
+            if (this.isXmlView) {
+                this.toggleView();
+                this.setStatus('AI response applied - switched to WYSIWYG view to show changes', 'success');
+            } else {
+                this.setStatus('AI response applied successfully - XML content updated', 'success');
+            }
+
+            console.log("Closing Modal");
+            this.closeModal();
+
+        } catch (error) {
+            console.error('Error applying AI response:', error);
+            this.setStatus(`Error applying AI response: ${error.message}`, 'error');
+        }
     }
+
+    // ...existing code...
 
     closeModal() {
         this.elements.aiModal.style.display = 'none';
