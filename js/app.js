@@ -6,16 +6,16 @@ class XMLEditor {
         this.aiIntegration = new AIIntegration();
         this.isXmlView = false;
         this.currentXml = '';
-        
+
         this.initializeEditor();
         this.setupEventListeners();
-        
+
         // Initialize TOC Manager
         this.tocManager = new TOCManager(this);
-        
+
         // Initialize Revision Manager
         this.revisionManager = new RevisionManager(this);
-        
+
         this.loadSampleContent();
     }
 
@@ -27,7 +27,7 @@ class XMLEditor {
                 toolbar: [
                     [{ 'header': [1, 2, 3, false] }],
                     ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                     ['link', 'blockquote', 'code-block'],
                     ['clean']
                 ]
@@ -57,6 +57,20 @@ class XMLEditor {
     }
 
     setupEventListeners() {
+        // Close modal when clicking outside
+        this.elements.aiModal.addEventListener('click', (e) => {
+            if (e.target === this.elements.aiModal) {
+                this.closeModal();
+            }
+        });
+
+        // Close modal with X button (span.close)
+        const closeSpans = document.querySelectorAll('.modal .close');
+        closeSpans.forEach(span => {
+            span.addEventListener('click', () => {
+                this.closeModal();
+            });
+        });
         // Editor content changes
         this.quill.on('text-change', () => {
             this.updateXmlFromEditor();
@@ -127,17 +141,17 @@ class XMLEditor {
         const sampleXml = this.xmlRenderer.createSampleXML();
         this.currentXml = sampleXml;
         this.elements.xmlSource.value = sampleXml;
-        
+
         // Set original content for revision tracking
         if (this.revisionManager) {
             this.revisionManager.setOriginalContent(sampleXml);
         }
-        
+
         // Convert to HTML for WYSIWYG editor
         const htmlContent = this.xmlRenderer.xmlToHtml(sampleXml);
         const delta = this.quill.clipboard.convert(htmlContent);
         this.quill.setContents(delta);
-        
+
         // Update preview
         this.updatePreview();
         this.setStatus('Sample content loaded');
@@ -145,7 +159,7 @@ class XMLEditor {
 
     toggleView() {
         this.isXmlView = !this.isXmlView;
-        
+
         if (this.isXmlView) {
             // Switch to XML view
             this.elements.wysiwyg.style.display = 'none';
@@ -174,11 +188,11 @@ class XMLEditor {
         if (!this.isXmlView) {
             this.currentXml = this.elements.xmlSource.value;
             const htmlContent = this.xmlRenderer.xmlToHtml(this.currentXml);
-            
+
             // Use Quill's clipboard API to properly convert HTML to Delta format
             const delta = this.quill.clipboard.convert(htmlContent);
             this.quill.setContents(delta);
-            
+
             this.updatePreview();
         }
     }
@@ -186,7 +200,7 @@ class XMLEditor {
     updatePreview() {
         const xmlToPreview = this.isXmlView ? this.elements.xmlSource.value : this.currentXml;
         this.xmlRenderer.renderPreview(xmlToPreview, this.elements.xmlPreview);
-        
+
         // Highlight revision comments if revision manager is available
         if (this.revisionManager) {
             this.revisionManager.highlightRevisions(this.elements.xmlPreview);
@@ -196,7 +210,7 @@ class XMLEditor {
     validateXml() {
         const xmlToValidate = this.isXmlView ? this.elements.xmlSource.value : this.currentXml;
         const validation = this.xmlRenderer.validateXML(xmlToValidate);
-        
+
         if (validation.valid) {
             this.setStatus(validation.message, 'success');
         } else {
@@ -218,7 +232,7 @@ class XMLEditor {
         const editorContainer = document.querySelector('.editor-container');
         const previewPanel = document.querySelector('.preview-panel');
         const toggleIcon = document.querySelector('.toggle-icon');
-        
+
         if (previewPanel.classList.contains('collapsed')) {
             // Expand preview
             previewPanel.classList.remove('collapsed');
@@ -238,7 +252,7 @@ class XMLEditor {
         const xmlToExport = this.isXmlView ? this.elements.xmlSource.value : this.currentXml;
         const blob = new Blob([xmlToExport], { type: 'application/xml' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `document_${new Date().toISOString().split('T')[0]}.xml`;
@@ -246,23 +260,23 @@ class XMLEditor {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         this.setStatus('XML exported successfully', 'success');
     }
 
     async importXml(file) {
         if (!file) return;
-        
+
         try {
             const text = await file.text();
             this.currentXml = text;
             this.elements.xmlSource.value = text;
-            
+
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(text);
             const delta = this.quill.clipboard.convert(htmlContent);
             this.quill.setContents(delta);
-            
+
             this.updatePreview();
             this.setStatus('XML imported successfully', 'success');
         } catch (error) {
@@ -284,7 +298,7 @@ class XMLEditor {
 
         try {
             const xmlContext = this.isXmlView ? this.elements.xmlSource.value : this.currentXml;
-            
+
             // Try local AI first, then fallback to mock service
             let result;
             try {
@@ -325,24 +339,24 @@ class XMLEditor {
 
         // Try to extract XML from the AI response
         const xmlContent = this.aiIntegration.extractXMLFromResponse(this.currentAIResponse);
-        
+
         if (xmlContent) {
             // Apply the extracted XML
             this.currentXml = xmlContent;
             this.elements.xmlSource.value = xmlContent;
-            
+
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
             const delta = this.quill.clipboard.convert(htmlContent);
             this.quill.setContents(delta);
-            
+
             this.updatePreview();
             this.setStatus('AI suggestions applied successfully', 'success');
         } else {
             // If no XML found, treat as general advice
             this.setStatus('AI response applied as guidance', 'info');
         }
-        
+
         this.closeModal();
     }
 
@@ -358,30 +372,30 @@ class XMLEditor {
                 this.setStatus('No XML content to load', 'error');
                 return false;
             }
-            
+
             this.currentXml = xmlContent;
             this.elements.xmlSource.value = xmlContent;
-            
+
             // Convert XML to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
             const delta = this.quill.clipboard.convert(htmlContent);
             this.quill.setContents(delta);
-            
+
             // Update preview
             this.updatePreview();
-            
+
             // Set original content for revision tracking - after content is loaded
             if (this.revisionManager) {
                 this.revisionManager.setOriginalContent(xmlContent);
-                
+
                 // Try multiple approaches to ensure revision refresh works
                 this.refreshRevisionsWithRetry();
             }
-            
+
             // Set status with document title
             const statusMessage = title ? `Loaded: ${title}` : 'XML content loaded';
             this.setStatus(statusMessage, 'success');
-            
+
             return true;
         } catch (error) {
             console.error('Error loading XML content:', error);
@@ -393,11 +407,11 @@ class XMLEditor {
     refreshRevisionsWithRetry() {
         let attempts = 0;
         const maxAttempts = 5;
-        
+
         const tryRefresh = () => {
             attempts++;
             console.log(`Revision refresh attempt ${attempts}/${maxAttempts}`);
-            
+
             // Check if content is actually available
             const currentContent = this.revisionManager.getCurrentXML();
             if (currentContent && currentContent.trim().length > 0) {
@@ -410,16 +424,16 @@ class XMLEditor {
                 console.log('Max attempts reached, giving up');
             }
         };
-        
+
         // Start immediately, then retry if needed
         tryRefresh();
     }
 
     setStatus(message, type = 'info') {
         this.elements.statusMessage.textContent = message;
-        this.elements.statusMessage.className = type === 'success' ? 'validation-success' : 
-                                               type === 'error' ? 'validation-error' : '';
-        
+        this.elements.statusMessage.className = type === 'success' ? 'validation-success' :
+            type === 'error' ? 'validation-error' : '';
+
         // Auto-clear status after 5 seconds
         setTimeout(() => {
             if (this.elements.statusMessage.textContent === message) {
@@ -433,16 +447,16 @@ class XMLEditor {
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.xmlEditor = new XMLEditor();
-    
+
     // Add some helpful console methods for development
     window.showAICapabilities = () => {
         console.log('AI Capabilities:', window.xmlEditor.aiIntegration.getCapabilities());
     };
-    
+
     window.getPromptTemplates = () => {
         console.log('Prompt Templates:', window.xmlEditor.aiIntegration.getPromptTemplates());
     };
-    
+
     window.testRevision = () => {
         console.log('Testing revision functionality...');
         // Make a small change to test
@@ -453,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.xmlEditor.updateXmlFromEditor();
         console.log('Made test change. Click "Save with AI Revision" to test the revision system.');
     };
-    
+
     console.log('XML WYSIWYG Editor loaded successfully!');
     console.log('Try: showAICapabilities(), getPromptTemplates(), or testRevision() in the console');
     console.log('💾 New: Save with AI Revision button generates automatic revision comments!');
