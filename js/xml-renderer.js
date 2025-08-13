@@ -8,9 +8,14 @@ class XMLRenderer {
     // Convert HTML from WYSIWYG to XML
     htmlToXml(html) {
         try {
-            // Simple HTML to XML conversion
-            // This is a basic implementation - you can enhance based on your needs
+            // Enhanced HTML to XML conversion with revisionComment support
             let xml = html
+                // Convert revision comment divs back to XML elements
+                .replace(/<div class="revision-comment"[^>]*data-xml-element="revisionComment"[^>]*data-attributes="([^"]*)"[^>]*>💬 Revision:\s*([^<]*)<\/div>/g, '<revisionComment$1>$2</revisionComment>')
+                
+                // Standard conversions
+                .replace(/<h1[^>]*>/g, '<title>')
+                .replace(/<\/h1>/g, '</title>')
                 .replace(/<p>/g, '<paragraph>')
                 .replace(/<\/p>/g, '</paragraph>')
                 .replace(/<strong>/g, '<bold>')
@@ -25,6 +30,10 @@ class XMLRenderer {
                 .replace(/<\/li>/g, '</item>')
                 .replace(/<br>/g, '<br/>')
                 .replace(/<br\/>/g, '<br/>');
+
+            // Clean up any remaining div tags that weren't converted
+            xml = xml.replace(/<div[^>]*>/g, '').replace(/<\/div>/g, '');
+            xml = xml.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '');
 
             // Wrap in root element if not already wrapped
             if (!xml.startsWith('<?xml')) {
@@ -58,6 +67,8 @@ class XMLRenderer {
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
                 .replace(/<\/para>/g, '</p>')
+                // IMPORTANT: Convert revisionComment to custom Quill blot format
+                .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<div class="revision-comment" data-xml-element="revisionComment" data-attributes="$1">💬 Revision: $2</div>')
                 .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
                 .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
                 .replace(/<Revisions[^>]*>/g, '<div class="revisions-section">')
@@ -188,23 +199,29 @@ class XMLRenderer {
         }).join('\n');
     }
 
-    // Render XML in preview panel
+    // Render XML in preview panel as HTML content
     renderPreview(xmlString, previewElement) {
         const validation = this.validateXML(xmlString);
-        xmlString = xmlString.replace(/<\?xml[^?]*\?>/g,'')
         
         if (validation.valid) {
-            // Use the original formatXML approach but with better error handling
-            const formatted = this.formatXML(xmlString);
-            previewElement.innerHTML = `<pre>${formatted}</pre>`;
+            // Convert XML to HTML for rendering as content preview
+            const htmlContent = this.xmlToHtml(xmlString);
+            
+            // Add a wrapper with preview-specific styling
+            previewElement.innerHTML = `
+                <div class="html-preview-content">
+                    ${htmlContent}
+                </div>
+            `;
         } else {
-           
             previewElement.innerHTML = `
                 <div class="validation-error">
                     <strong>XML Validation Error:</strong><br>
                     ${validation.error}
                 </div>
-                <pre>${this.escapeHtml(xmlString)}</pre>
+                <div class="error-xml-content">
+                    <pre>${this.escapeHtml(xmlString)}</pre>
+                </div>
             `;
         }
     }

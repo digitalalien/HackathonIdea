@@ -41,27 +41,11 @@ Format your analysis with clear sections and actionable recommendations. Use tec
  * Returns a system prompt for XML change detection and summarization
  */
 function getXMLChangeAnalysisPrompt(context = '') {
-    return `You are an XML change analyst expert at comparing XML documents and summarizing differences.
+    return `Compare the XML content and describe what changed in one sentence.
 
-When analyzing changes between XML files:
-- Identify structural changes (added/removed elements, hierarchy modifications)
-- Detect attribute changes (new, modified, or deleted attributes)
-- Highlight content modifications (text changes, CDATA updates)
-- Note namespace and schema changes
-- Assess impact of changes on document validity and functionality
-- Categorize changes by severity (breaking, non-breaking, cosmetic)
-- Provide clear before/after comparisons
-- Suggest migration strategies for breaking changes
+${context ? `XML content:\n${context}` : ''}
 
-${context ? `Please analyze the following XML content for changes or compare versions if multiple documents are provided:\n\n${context}` : ''}
-
-Present findings in a structured format with:
-1. Executive summary of changes
-2. Detailed change breakdown by category
-3. Impact assessment
-4. Recommendations for implementation
-
-Be precise about line numbers, element paths, and specific modifications.`;
+Response format: One sentence describing the main change.`;
 }
 
 /**
