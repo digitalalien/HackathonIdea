@@ -199,30 +199,29 @@ class XMLRenderer {
         }).join('\n');
     }
 
-    // Render XML in preview panel
+    // Render XML in preview panel as HTML content
     renderPreview(xmlString, previewElement) {
         const validation = this.validateXML(xmlString);
-        xmlString = xmlString.replace(/<\?xml[^?]*\?>/g,'')
         
         if (validation.valid) {
-            // Format XML and highlight revision comments
-            let formatted = this.formatXML(xmlString);
+            // Convert XML to HTML for rendering as content preview
+            const htmlContent = this.xmlToHtml(xmlString);
             
-            // Add HTML styling to revision comments for better visibility in preview
-            formatted = formatted.replace(
-                /<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, 
-                '<span class="xml-revision-comment">&lt;revisionComment$1&gt;<span class="revision-content">$2</span>&lt;/revisionComment&gt;</span>'
-            );
-            
-            previewElement.innerHTML = `<pre>${formatted}</pre>`;
+            // Add a wrapper with preview-specific styling
+            previewElement.innerHTML = `
+                <div class="html-preview-content">
+                    ${htmlContent}
+                </div>
+            `;
         } else {
-           
             previewElement.innerHTML = `
                 <div class="validation-error">
                     <strong>XML Validation Error:</strong><br>
                     ${validation.error}
                 </div>
-                <pre>${this.escapeHtml(xmlString)}</pre>
+                <div class="error-xml-content">
+                    <pre>${this.escapeHtml(xmlString)}</pre>
+                </div>
             `;
         }
     }

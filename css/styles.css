@@ -410,6 +410,155 @@ header p {
     font-weight: bold;
 }
 
+/* HTML Preview Content Styling */
+.html-preview-content {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    padding: 25px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+}
+
+.html-preview-content > * {
+    margin-top: 0;
+}
+
+.html-preview-content > *:not(:last-child) {
+    margin-bottom: 20px;
+}
+
+.html-preview-content h1 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.html-preview-content p {
+    margin-bottom: 20px;
+    margin-top: 0;
+    text-align: justify;
+    line-height: 1.7;
+    padding: 0 5px;
+    text-indent: 0;
+}
+
+.html-preview-content p:first-child {
+    margin-top: 0;
+}
+
+.html-preview-content p:last-child {
+    margin-bottom: 10px;
+}
+
+.html-preview-content ul, 
+.html-preview-content ol {
+    margin: 15px 0;
+    padding-left: 30px;
+}
+
+.html-preview-content li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.html-preview-content strong {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.html-preview-content em {
+    font-style: italic;
+    color: #34495e;
+}
+
+.html-preview-content .topic,
+.html-preview-content .section {
+    margin: 25px 0;
+    padding: 20px;
+    border-radius: 6px;
+}
+
+.html-preview-content .topic {
+    background-color: rgba(0, 123, 255, 0.02);
+    border-left: 4px solid #007bff;
+}
+
+.html-preview-content .section {
+    background-color: rgba(40, 167, 69, 0.02);
+    border-left: 4px solid #28a745;
+}
+
+.html-preview-content .revision-comment {
+    background-color: #fff9c4;
+    border: 2px solid #f39c12;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 15px 0;
+    font-style: italic;
+    color: #d68910;
+    border-left: 6px solid #f39c12;
+    box-shadow: 0 2px 4px rgba(243, 156, 18, 0.2);
+}
+
+.html-preview-content .revision-comment::before {
+    content: "💬 ";
+    font-style: normal;
+    font-weight: bold;
+}
+
+.html-preview-content .revisions-section {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.html-preview-content .revision {
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.html-preview-content .revision-number {
+    font-weight: bold;
+    color: #495057;
+}
+
+.html-preview-content .revision-date {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.html-preview-content .revision-comment {
+    color: #495057;
+    font-style: italic;
+}
+
+.html-preview-content .reference {
+    background-color: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 10px 0;
+    color: #0066cc;
+}
+
+.error-xml-content {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
 .status-bar {
     background: white;
     padding: 10px 15px;
