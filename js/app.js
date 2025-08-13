@@ -1,10 +1,9 @@
 // Main Application Logic
-
 class XMLEditor {
     constructor() {
         this.xmlRenderer = new XMLRenderer();
         this.aiIntegration = new AIIntegration();
-        this.isXmlView = false;
+        this.isXmlView = true; // Default to XML view
         this.currentXml = '';
         
         this.initializeEditor();
@@ -54,6 +53,13 @@ class XMLEditor {
             closeModal: document.getElementById('closeModal'),
             wysiwyg: document.getElementById('editor')
         };
+
+        // Set initial UI state to XML view if needed
+        if (this.isXmlView && this.elements) {
+            this.elements.wysiwyg.style.display = 'none';
+            this.elements.xmlSource.style.display = 'block';
+            this.elements.toggleView.textContent = 'Switch to WYSIWYG View';
+        }
     }
 
     setupEventListeners() {
@@ -96,6 +102,17 @@ class XMLEditor {
             this.importXml(e.target.files[0]);
         });
 
+        // AI Integration
+        this.elements.callAI.addEventListener('click', () => {
+            this.callAI();
+        });
+
+        this.elements.aiPrompt.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.callAI();
+            }
+        });
+
         // Modal controls
         this.elements.closeModal.addEventListener('click', () => {
             this.closeModal();
@@ -135,8 +152,7 @@ class XMLEditor {
         
         // Convert to HTML for WYSIWYG editor
         const htmlContent = this.xmlRenderer.xmlToHtml(sampleXml);
-        const delta = this.quill.clipboard.convert(htmlContent);
-        this.quill.setContents(delta);
+        this.quill.root.innerHTML = htmlContent;
         
         // Update preview
         this.updatePreview();
@@ -162,7 +178,7 @@ class XMLEditor {
     }
 
     updateXmlFromEditor() {
-        if (this.isXmlView) {
+        if (!this.isXmlView) {
             const htmlContent = this.quill.root.innerHTML;
             this.currentXml = this.xmlRenderer.htmlToXml(htmlContent);
             this.elements.xmlSource.value = this.currentXml;
@@ -171,14 +187,11 @@ class XMLEditor {
     }
 
     updateEditorFromXml() {
-        if (!this.isXmlView) {
+        if (this.isXmlView) {
             this.currentXml = this.elements.xmlSource.value;
             const htmlContent = this.xmlRenderer.xmlToHtml(this.currentXml);
-            
-            // Use Quill's clipboard API to properly convert HTML to Delta format
-            const delta = this.quill.clipboard.convert(htmlContent);
-            this.quill.setContents(delta);
-            
+            this.quill.root.innerHTML = htmlContent;
+           
             this.updatePreview();
         }
     }
@@ -260,8 +273,7 @@ class XMLEditor {
             
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(text);
-            const delta = this.quill.clipboard.convert(htmlContent);
-            this.quill.setContents(delta);
+            this.quill.root.innerHTML = htmlContent;
             
             this.updatePreview();
             this.setStatus('XML imported successfully', 'success');
@@ -333,8 +345,7 @@ class XMLEditor {
             
             // Convert to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
-            const delta = this.quill.clipboard.convert(htmlContent);
-            this.quill.setContents(delta);
+            this.quill.root.innerHTML = htmlContent;
             
             this.updatePreview();
             this.setStatus('AI suggestions applied successfully', 'success');
@@ -364,8 +375,7 @@ class XMLEditor {
             
             // Convert XML to HTML for WYSIWYG editor
             const htmlContent = this.xmlRenderer.xmlToHtml(xmlContent);
-            const delta = this.quill.clipboard.convert(htmlContent);
-            this.quill.setContents(delta);
+            this.quill.root.innerHTML = htmlContent;
             
             // Update preview
             this.updatePreview();
@@ -447,9 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Testing revision functionality...');
         // Make a small change to test
         const currentContent = window.xmlEditor.quill.root.innerHTML;
-        const newHtml = currentContent + '<p>Test change for revision</p>';
-        const delta = window.xmlEditor.quill.clipboard.convert(newHtml);
-        window.xmlEditor.quill.setContents(delta);
+        window.xmlEditor.quill.root.innerHTML = currentContent + '<p>Test change for revision</p>';
         window.xmlEditor.updateXmlFromEditor();
         console.log('Made test change. Click "Save with AI Revision" to test the revision system.');
     };

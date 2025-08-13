@@ -10,8 +10,11 @@
         Build context-aware, reasoning applications with LangChain’s flexible abstractions and AI-first toolkits.
     </para>
     
-    <revisionComment id="id-rev-001">
-        Added introductory paragraph to clarify LangChain’s use in AI-first applications.
-    </revisionComment>
+    
+    <revisionMetadata>
+        <revisionDate>2025-08-12</revisionDate>
+        <revisionComment>Initial draft created for AI integration demo.</revisionComment>
+    </revisionMetadata>
+
 
 </topic>
