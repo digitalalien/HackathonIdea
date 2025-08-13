@@ -52,6 +52,8 @@ class XMLRenderer {
         try {
             // Handle specialized XML elements from the sample files
             //xml = xml.replace(/<\?xml[^?]*\?>/g,'')
+            
+            console.log('XML to HTML input:', xml.substring(0, 500));
                
             let html = xml
                 .replace(/<\?xml[^>]*\?>/g, '') // Remove XML declaration
@@ -67,7 +69,38 @@ class XMLRenderer {
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
                 .replace(/<\/para>/g, '</p>')
-                // IMPORTANT: Convert revisionComment to custom Quill blot format
+                // Handle structured revision comments - convert to simple table
+                .replace(/<revisionComment[^>]*>\s*([\s\S]*?)\s*<\/revisionComment>/gi, (match, content) => {
+                    console.log('Found revisionComment, converting to table');
+                    
+                    // Extract all the nested elements and their text content
+                    let revisionNumber = '';
+                    let revisionDate = '';
+                    let revisionCommentText = '';
+                    let revisedBy = '';
+                    
+                    // Simple extraction - just grab text between tags
+                    const numberMatch = content.match(/<revisionNumber[^>]*>([^<]*)<\/revisionNumber>/i);
+                    const dateMatch = content.match(/<revisionDate[^>]*>([^<]*)<\/revisionDate>/i);
+                    const commentMatch = content.match(/<revisionComment[^>]*>([^<]*)<\/revisionComment>/i);
+                    const byMatch = content.match(/<revisedBy[^>]*>([^<]*)<\/revisedBy>/i);
+                    
+                    if (numberMatch) revisionNumber = numberMatch[1].trim();
+                    if (dateMatch) revisionDate = dateMatch[1].trim();
+                    if (commentMatch) revisionCommentText = commentMatch[1].trim();
+                    if (byMatch) revisedBy = byMatch[1].trim();
+                    
+                    return `<div class="revision-comment-table" data-xml-element="revisionComment">
+                        <h4>📝 Revision Comment</h4>
+                        <table class="revision-table">
+                            <tr><td><strong>Revision:</strong></td><td>${revisionNumber || 'N/A'}</td></tr>
+                            <tr><td><strong>Date:</strong></td><td>${revisionDate || 'N/A'}</td></tr>
+                            <tr><td><strong>Comment:</strong></td><td>${revisionCommentText || 'N/A'}</td></tr>
+                            <tr><td><strong>Revised By:</strong></td><td>${revisedBy || 'N/A'}</td></tr>
+                        </table>
+                    </div>`;
+                })
+                // Fallback: Handle simple revisionComment elements (legacy format)
                 .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<div class="revision-comment" data-xml-element="revisionComment" data-attributes="$1">💬 Revision: $2</div>')
                 .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
                 .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
