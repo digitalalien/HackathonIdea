@@ -76,6 +76,9 @@ app.post('/api/ai', async (req, res) => {
             case 'xml_produce_edits':
                 systemPrompt = prompts.getXMLProduceEditsPrompt(context);
                 break;
+            case 'xml_revision_comment':
+                systemPrompt = prompts.getXMLRevisionCommentPrompt(context);
+                break;  
             default:
                 systemPrompt = prompts.getXMLExpertPrompt(context); // Default to general XML expert
                 break;
