@@ -83,6 +83,11 @@ class RevisionManager {
         this.currentContent = content;
     }
 
+    // Update current content without changing the baseline for comparison
+    updateCurrentContent(content) {
+        this.currentContent = content;
+    }
+
     getCurrentXML() {
         // Get the most current XML content
         if (this.xmlEditor.isXmlView) {
@@ -475,7 +480,8 @@ ${currentXml}`;
                 timestamp: new Date().toISOString()
             });
 
-            // Update original content for next comparison
+            // Update original content for next comparison - this becomes the new baseline
+            // after a revision is saved
             this.setOriginalContent(this.getCurrentXML());
             
             this.closeRevisionModal();

@@ -374,9 +374,9 @@ class XMLEditor {
             // Update the preview
             this.updatePreview();
 
-            // Update revision tracking if available
+            // Update current content for revision tracking without changing the baseline
             if (this.revisionManager) {
-                this.revisionManager.setOriginalContent(xmlContent);
+                this.revisionManager.updateCurrentContent(xmlContent);
             }
 
             // Stay in current view mode - don't force switch to WYSIWYG
