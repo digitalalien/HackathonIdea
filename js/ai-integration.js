@@ -121,14 +121,14 @@ function showAIResponse(response, summary) {
     }
 }
 
-async function executeAIApiCall(prompt, context) {
+async function executeAIApiCall(prompt, context, options = {}) {
     const payload = {
         prompt: prompt,
         context: context,
-        maxTokens: 1000,
-        temperature: 0.7,
+        maxTokens: options.maxTokens || 1000,
+        temperature: options.temperature || 0.7,
+        structuredOutput: options.structuredOutput || false
     };
-
 
     const response = await fetch('http://localhost:3001/api/ai', {
         method: 'POST',

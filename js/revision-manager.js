@@ -155,29 +155,19 @@ class RevisionManager {
 
     async performAIChangeAnalysis() {
         try {
-            const analysisPrompt = `You are an expert technical documentation analyst. Compare these two XML documents and provide a detailed analysis of what changed. Focus on meaningful changes that would be important for revision tracking in a technical manual.
-
-ORIGINAL XML:
-${this.originalContent}
+            // Get current XML content directly
+            const originalXml = this.originalContent || '';
+            const currentXml = this.getCurrentXML() || '';
+            
+            // Create context with old and new XML for AI analysis
+            const context = `ORIGINAL XML:
+${originalXml}
 
 CURRENT XML:
-${this.currentContent}
+${currentXml}`;
 
-Please analyze and provide:
-1. What specific content was added, modified, or removed
-2. The significance of each change
-3. Impact on users/operators
-4. Any safety or procedural implications
-
-Format your response as a clear, structured analysis that explains the changes in professional technical documentation language. Be specific about what changed rather than generic.
-
-If no significant changes are detected, state that clearly.`;
-
-            const result = await this.xmlEditor.aiIntegration.callAI(analysisPrompt, '', {
-                maxTokens: 500,
-                temperature: 0.3,
-                includeContext: false
-            });
+            // Use the existing executeAIApiCall function with xml_change_analysis prompt
+            const result = await executeAIApiCall('xml_change_analysis', context);
 
             if (result.success) {
                 return {
@@ -308,66 +298,97 @@ If no significant changes are detected, state that clearly.`;
             this.elements.revisionComment.value = 'AI is generating revision comment...';
             this.elements.regenerateComment.disabled = true;
 
-            const analysisText = this.elements.changeAnalysis.textContent;
+            // First, get the change analysis
+            const aiAnalysis = await this.performAIChangeAnalysis();
+
+            console.log("AI Analysis Result:", aiAnalysis);
             
-            const prompt = `Based on the following detailed change analysis, generate a concise, professional revision comment for a technical manual. The comment should be 1-2 sentences that clearly explain what changed and why it matters to users.
+            if (aiAnalysis.success) {
+                // Now use the analysis result to generate a revision comment using structured output
+                const commentResult = await executeAIApiCall('xml_revision_content', aiAnalysis.analysis, {
+                    temperature: 0.3
+                });
 
-Change Analysis:
-${analysisText}
+                console.log("Structured Output Revision XML Content:", commentResult);
 
-Requirements for the revision comment:
-- Be specific about what changed (not generic)
-- Use professional technical documentation language
-- Keep it concise (under 150 characters if possible)
-- Focus on the most significant change if multiple changes exist
-- Use action words (Updated, Added, Corrected, Modified, etc.)
-
-Examples of good revision comments:
-- "Updated caution note under engine startup procedure to reflect new OEM guidance."
-- "Added safety warning for high-voltage components in maintenance section."
-- "Corrected torque specifications for wheel lug nuts based on manufacturer update."
-- "Reorganized troubleshooting steps for improved clarity and logical flow."
-- "Modified procedural steps to align with current regulatory requirements."
-
-Generate ONLY the revision comment text (no quotes, no additional formatting):`;
-
-            const result = await this.xmlEditor.aiIntegration.callAI(prompt, '', {
-                maxTokens: 100,
-                temperature: 0.2,
-                includeContext: false
-            });
-
-            if (result.success) {
-                let comment = result.response.trim();
-                
-                // Clean up the response
-                comment = comment.replace(/^["']|["']$/g, ''); // Remove quotes
-                comment = comment.replace(/^Revision comment:\s*/i, ''); // Remove prefixes
-                comment = comment.replace(/^Comment:\s*/i, ''); // Remove prefixes
-                comment = comment.split('\n')[0]; // Take first line only
-                
-                // Ensure it's not too long
-                if (comment.length > 200) {
-                    comment = comment.substring(0, 197) + '...';
+                if (commentResult.success) {
+                    let xmlResponse = commentResult.response.trim();
+                    
+                    console.log("Raw XML Response:", xmlResponse);
+                    
+                    // Parse the XML response to extract the revision comment
+                    try {
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlResponse, 'text/xml');
+                        
+                        // Check for parsing errors
+                        const parseError = xmlDoc.querySelector('parsererror');
+                        if (parseError) {
+                            throw new Error('Invalid XML returned from AI');
+                        }
+                        
+                        // Extract the revision comment from the XML
+                        const revisionCommentElement = xmlDoc.querySelector('revisionComment');
+                        if (revisionCommentElement) {
+                            const commentText = revisionCommentElement.textContent.trim();
+                            
+                            // Also extract other fields if available
+                            const revisionNumber = xmlDoc.querySelector('revisionNumber')?.textContent?.trim();
+                            const revisionDate = xmlDoc.querySelector('revisionDate')?.textContent?.trim();
+                            
+                            // Update the form fields
+                            if (revisionNumber) {
+                                this.elements.revisionNumber.value = revisionNumber;
+                            }
+                            if (revisionDate) {
+                                this.elements.revisionDate.value = revisionDate;
+                            }
+                            
+                            // Show the full XML structure in the revision comment textbox
+                            this.elements.revisionComment.value = xmlResponse;
+                            this.xmlEditor.setStatus('AI revision XML structure generated', 'success');
+                        } else {
+                            throw new Error('No revisionComment element found in XML response');
+                        }
+                        
+                    } catch (error) {
+                        console.warn('Failed to parse XML response, treating as plain text:', error);
+                        
+                        // Fallback: treat as plain text and clean it up
+                        let comment = xmlResponse.replace(/^["']|["']$/g, ''); // Remove quotes
+                        comment = comment.replace(/^Revision comment:\s*/i, ''); // Remove prefixes
+                        comment = comment.replace(/^Comment:\s*/i, ''); // Remove prefixes
+                        comment = comment.split('\n')[0]; // Take first line only
+                        
+                        // Ensure it's not too long
+                        if (comment.length > 200) {
+                            comment = comment.substring(0, 197) + '...';
+                        }
+                        
+                        // Ensure it ends with a period
+                        if (comment && !comment.endsWith('.') && !comment.endsWith('!') && !comment.endsWith('?')) {
+                            comment += '.';
+                        }
+                        
+                        this.elements.revisionComment.value = comment || 'Updated content with improvements and corrections.';
+                        this.xmlEditor.setStatus('AI revision comment generated (fallback text parsing)', 'success');
+                    }
+                } else {
+                    // Fallback: use basic comment generation
+                    const fallbackComment = this.generateFallbackComment('Content has been modified');
+                    this.elements.revisionComment.value = fallbackComment;
+                    this.xmlEditor.setStatus('Error generating revision comment, using fallback', 'warning');
                 }
-                
-                // Ensure it ends with a period
-                if (comment && !comment.endsWith('.') && !comment.endsWith('!') && !comment.endsWith('?')) {
-                    comment += '.';
-                }
-                
-                this.elements.revisionComment.value = comment || 'Updated content with improvements and corrections.';
-                this.xmlEditor.setStatus('AI revision comment generated', 'success');
             } else {
-                // Fallback: use change analysis to generate a basic comment
-                const fallbackComment = this.generateFallbackComment(analysisText);
+                // Fallback: use basic comment generation
+                const fallbackComment = this.generateFallbackComment('Content has been modified');
                 this.elements.revisionComment.value = fallbackComment;
-                this.xmlEditor.setStatus('Using fallback revision comment generation', 'warning');
+                this.xmlEditor.setStatus('Analysis failed, using fallback revision comment', 'warning');
             }
 
         } catch (error) {
             console.error('Error generating revision comment:', error);
-            const fallbackComment = this.generateFallbackComment(this.elements.changeAnalysis.textContent);
+            const fallbackComment = this.generateFallbackComment('Content has been modified');
             this.elements.revisionComment.value = fallbackComment;
             this.xmlEditor.setStatus('Error generating revision comment, using fallback', 'warning');
         } finally {

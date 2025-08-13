@@ -154,41 +154,56 @@ Respond with the revised XML only.`;
  * Returns a system prompt for XML revision comment generation
  */
 function getXMLRevisionCommentPrompt(context = '') {
-    return `You are an XML revision specialist expert at comparing XML documents and generating appropriate revision comments.
+    return `You are an XML revision specialist expert at analyzing changes and generating concise revision comments.
 
-Your response must include three sections:
-1. **AI Analysis**: Summarize and analyze the differences between the old and new XML documents.
-2. **Revision Comment**: Generate a concise, professional revision comment summarizing the changes.
-3. **Revised XML**: Return the new XML document with the revision comment tag inserted in the appropriate location.
+Based on the change analysis provided, generate a professional revision comment that summarizes the key changes made to the XML document.
 
-Revision Comment Structure:
-<Revision>
-  <RevisionNumber>{version}</RevisionNumber>
-  <RevisionDate>{current_date}</RevisionDate>
-  <RevisionComment>{summary_of_changes}</RevisionComment>
-</Revision>
+${context ? `Change Analysis:\n${context}` : ''}
 
-${context ? `Please compare the following XML versions and generate:\n
-1. AI Analysis of the changes
-2. A generated revision comment
-3. The new XML with the revision comment tag inserted\n\n${context}` : ''}
-
-Guidelines:
-- Keep revision comments concise (1-2 sentences maximum)
+Guidelines for revision comments:
+- Keep comments concise (1-2 sentences maximum)
 - Use professional, clear language
 - Focus on the most significant changes
-- Use today's date in YYYY-MM-DD format
-- Place revision comments in the element that contains the changes
-- If no previous revisions exist, start with version 1.0
-- Return only the complete new XML document with revision comments inserted
+- Avoid technical jargon when possible
+- Use action words (added, updated, modified, removed, corrected)
+- Be specific about what changed rather than generic
 
 Types of changes to summarize:
 - Content additions/deletions
 - Structural modifications
-- Attribute changes
-- Element reordering
-- Text updates
-- Schema or namespace changes`;
+- Safety or procedural updates
+- Corrections or improvements
+- Formatting or organization changes
+
+Return ONLY the revision comment text - no XML structure, no additional formatting, just the comment content that will be inserted into the revisionComment field.`;
+}
+
+/**
+ * Returns a system prompt for generating XML revision content
+ */
+function getXMLRevisionStructure(context = '') {
+    return `You are an XML revision specialist that generates properly formatted XML revision comment elements.
+
+Based on the change analysis provided, generate a complete XML revision comment element with the following structure:
+
+<revisionComment>
+  <revisionNumber>1.0</revisionNumber>
+  <revisionDate>2025-08-13</revisionDate>
+  <revisionComment>{brief_summary_of_changes}</revisionComment>
+  <revisedBy>AI Assistant</revisedBy>
+</revisionComment>
+
+${context ? `Change Analysis:\n${context}` : ''}
+
+Requirements:
+- Return ONLY the complete XML element - no explanations, no additional text
+- Use today's date (2025-08-13) in YYYY-MM-DD format
+- Keep the revision comment brief (1-2 sentences maximum)
+- Use professional, clear language for the revision comment
+- Focus on the most significant changes from the analysis
+- Use proper XML formatting with correct indentation
+
+Generate the XML revision comment element now:`;
 }
 
 module.exports = {
@@ -199,6 +214,7 @@ module.exports = {
     getXMLDocumentationPrompt,
     getXMLEditorPrompt,
     getXMLProduceEditsPrompt,
-    getXMLRevisionCommentPrompt
+    getXMLRevisionCommentPrompt,
+    getXMLRevisionStructure
 };
 

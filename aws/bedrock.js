@@ -16,6 +16,7 @@ class BedrockAIClient {
     }
 
     async invokeModel(prompt, options = {}) {
+        console.log(`Invoking model: ${this.model}`);
         const {
             maxTokens = 1000,
             temperature = 0.7,
