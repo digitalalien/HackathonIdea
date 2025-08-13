@@ -155,37 +155,33 @@ class RevisionManager {
 
     async performAIChangeAnalysis() {
         try {
-            const analysisPrompt = `You are an expert technical documentation analyst. Compare these two XML documents and provide a detailed analysis of what changed. Focus on meaningful changes that would be important for revision tracking in a technical manual.
+           //I need to set the context to the original and current XML content
+           const context = `Original XML:\n${this.originalContent}\n\nCurrent XML:\n${this.currentContent}`;
 
-ORIGINAL XML:
-${this.originalContent}
-
-CURRENT XML:
-${this.currentContent}
-
-Please analyze and provide:
-1. What specific content was added, modified, or removed
-2. The significance of each change
-3. Impact on users/operators
-4. Any safety or procedural implications
-
-Format your response as a clear, structured analysis that explains the changes in professional technical documentation language. Be specific about what changed rather than generic.
-
-If no significant changes are detected, state that clearly.`;
-
-            const result = await this.xmlEditor.aiIntegration.callAI(analysisPrompt, '', {
-                maxTokens: 500,
-                temperature: 0.3,
-                includeContext: false
+            const response = await fetch('http://localhost:3001/api/ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: 'xml_change_analysis',
+                    context: context
+                })
             });
 
-            if (result.success) {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = response.response
+
+            if (data.success) {
                 return {
                     success: true,
-                    analysis: result.response.trim()
+                    analysis: data.response.trim()
                 };
             } else {
-                return { success: false, error: result.error };
+                return { success: false, error: data.error };
             }
 
         } catch (error) {
@@ -305,41 +301,29 @@ If no significant changes are detected, state that clearly.`;
 
     async generateRevisionComment() {
         try {
-            this.elements.revisionComment.value = 'AI is generating revision comment...';
-            this.elements.regenerateComment.disabled = true;
+           //I need to set the context to the original and current XML content
+           const context = `Original XML:\n${this.originalContent}\n\nCurrent XML:\n${this.currentContent}`;
 
-            const analysisText = this.elements.changeAnalysis.textContent;
-            
-            const prompt = `Based on the following detailed change analysis, generate a concise, professional revision comment for a technical manual. The comment should be 1-2 sentences that clearly explain what changed and why it matters to users.
-
-Change Analysis:
-${analysisText}
-
-Requirements for the revision comment:
-- Be specific about what changed (not generic)
-- Use professional technical documentation language
-- Keep it concise (under 150 characters if possible)
-- Focus on the most significant change if multiple changes exist
-- Use action words (Updated, Added, Corrected, Modified, etc.)
-
-Examples of good revision comments:
-- "Updated caution note under engine startup procedure to reflect new OEM guidance."
-- "Added safety warning for high-voltage components in maintenance section."
-- "Corrected torque specifications for wheel lug nuts based on manufacturer update."
-- "Reorganized troubleshooting steps for improved clarity and logical flow."
-- "Modified procedural steps to align with current regulatory requirements."
-
-Generate ONLY the revision comment text (no quotes, no additional formatting):`;
-
-            const result = await this.xmlEditor.aiIntegration.callAI(prompt, '', {
-                maxTokens: 100,
-                temperature: 0.2,
-                includeContext: false
+            const response = await fetch('http://localhost:3001/api/ai', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: 'xml_change_analysis',
+                    context: context
+                })
             });
 
-            if (result.success) {
-                let comment = result.response.trim();
-                
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                let comment = data.response.trim();
+
                 // Clean up the response
                 comment = comment.replace(/^["']|["']$/g, ''); // Remove quotes
                 comment = comment.replace(/^Revision comment:\s*/i, ''); // Remove prefixes
