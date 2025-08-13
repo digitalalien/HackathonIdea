@@ -186,18 +186,18 @@ function getXMLRevisionStructure(context = '') {
 
 Based on the change analysis provided, generate a complete XML revision comment element with the following structure:
 
-<revisionComment>
+<revision>
   <revisionNumber>1.0</revisionNumber>
   <revisionDate>2025-08-13</revisionDate>
   <revisionComment>{brief_summary_of_changes}</revisionComment>
   <revisedBy>AI Assistant</revisedBy>
-</revisionComment>
+</revision>
 
 ${context ? `Change Analysis:\n${context}` : ''}
 
 Requirements:
 - Return ONLY the complete XML element - no explanations, no additional text
-- Use today's date (2025-08-13) in YYYY-MM-DD format
+- Use today's date (2025-08-14) in YYYY-MM-DD format
 - Keep the revision comment brief (1-2 sentences maximum)
 - Use professional, clear language for the revision comment
 - Focus on the most significant changes from the analysis

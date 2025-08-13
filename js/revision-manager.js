@@ -327,14 +327,14 @@ ${currentXml}`;
                             throw new Error('Invalid XML returned from AI');
                         }
                         
-                        // Extract the revision comment from the XML
-                        const revisionCommentElement = xmlDoc.querySelector('revisionComment');
-                        if (revisionCommentElement) {
-                            const commentText = revisionCommentElement.textContent.trim();
-                            
-                            // Also extract other fields if available
-                            const revisionNumber = xmlDoc.querySelector('revisionNumber')?.textContent?.trim();
-                            const revisionDate = xmlDoc.querySelector('revisionDate')?.textContent?.trim();
+                        // Check for the new revision structure first
+                        const revisionElement = xmlDoc.querySelector('revision');
+                        if (revisionElement) {
+                            // Extract fields from the new revision structure
+                            const revisionNumber = revisionElement.querySelector('revisionNumber')?.textContent?.trim();
+                            const revisionDate = revisionElement.querySelector('revisionDate')?.textContent?.trim();
+                            const revisionComment = revisionElement.querySelector('revisionComment')?.textContent?.trim();
+                            const revisedBy = revisionElement.querySelector('revisedBy')?.textContent?.trim();
                             
                             // Update the form fields
                             if (revisionNumber) {
@@ -344,11 +344,35 @@ ${currentXml}`;
                                 this.elements.revisionDate.value = revisionDate;
                             }
                             
-                            // Show the full XML structure in the revision comment textbox
-                            this.elements.revisionComment.value = xmlResponse;
-                            this.xmlEditor.setStatus('AI revision XML structure generated', 'success');
+                            // Show only the comment text in the revision comment textbox (not the full XML)
+                            this.elements.revisionComment.value = revisionComment || 'AI-generated revision comment';
+                            this.xmlEditor.setStatus('AI revision content generated', 'success');
+                            
+                            console.log('Extracted revision data:', { revisionNumber, revisionDate, revisionComment, revisedBy });
                         } else {
-                            throw new Error('No revisionComment element found in XML response');
+                            // Fallback: Check for legacy revisionComment structure
+                            const revisionCommentElement = xmlDoc.querySelector('revisionComment');
+                            if (revisionCommentElement) {
+                                const commentText = revisionCommentElement.textContent.trim();
+                                
+                                // Also extract other fields if available
+                                const revisionNumber = xmlDoc.querySelector('revisionNumber')?.textContent?.trim();
+                                const revisionDate = xmlDoc.querySelector('revisionDate')?.textContent?.trim();
+                                
+                                // Update the form fields
+                                if (revisionNumber) {
+                                    this.elements.revisionNumber.value = revisionNumber;
+                                }
+                                if (revisionDate) {
+                                    this.elements.revisionDate.value = revisionDate;
+                                }
+                                
+                                // Show the comment text in the revision comment textbox
+                                this.elements.revisionComment.value = commentText;
+                                this.xmlEditor.setStatus('AI revision comment generated (legacy format)', 'success');
+                            } else {
+                                throw new Error('No revision or revisionComment element found in XML response');
+                            }
                         }
                         
                     } catch (error) {
@@ -428,8 +452,14 @@ ${currentXml}`;
                 return;
             }
 
-            // Create revision XML
-            const revisionXML = this.createRevisionXML(revisionNumber, revisionDate, revisionComment);
+            // For AI-generated revisions, we need to reconstruct the full XML structure
+            // since we only stored the comment text in the textarea
+            const revisionXML = `<revision>
+  <revisionNumber>${revisionNumber}</revisionNumber>
+  <revisionDate>${revisionDate}</revisionDate>
+  <revisionComment>${this.escapeXML(revisionComment)}</revisionComment>
+  <revisedBy>AI Assistant</revisedBy>
+</revision>`;
             
             // Insert revision into current XML
             const updatedXML = this.insertRevisionIntoXML(this.currentContent, revisionXML);
@@ -446,7 +476,7 @@ ${currentXml}`;
             });
 
             // Update original content for next comparison
-            this.setOriginalContent(updatedXML);
+            this.setOriginalContent(this.getCurrentXML());
             
             this.closeRevisionModal();
             this.xmlEditor.setStatus(`Revision ${revisionNumber} added successfully`, 'success');
@@ -478,32 +508,94 @@ ${currentXml}`;
 
             const root = doc.documentElement;
             
-            // Look for existing Revisions section
-            let revisionsElement = doc.querySelector('Revisions');
-            
-            if (!revisionsElement) {
-                // Create new Revisions section
-                revisionsElement = doc.createElement('Revisions');
+            // Check if this is AI-generated revision XML (starts with <revision>)
+            if (revisionXML.trim().startsWith('<revision>')) {
+                // Parse the AI-generated revision element
+                const revisionDoc = parser.parseFromString(`<root>${revisionXML}</root>`, 'application/xml');
+                const revisionNode = revisionDoc.querySelector('revision');
                 
-                // Insert after root opening tag but before main content
-                if (root.firstElementChild) {
-                    root.insertBefore(revisionsElement, root.firstElementChild);
-                } else {
-                    root.appendChild(revisionsElement);
+                if (revisionNode) {
+                    // Import the revision node directly
+                    const importedRevision = doc.importNode(revisionNode, true);
+                    
+                    // Insert the revision directly into the root element
+                    // Place it at the beginning, after any existing revision elements
+                    const existingRevisions = root.querySelectorAll('revision');
+                    if (existingRevisions.length > 0) {
+                        // Insert after the last existing revision
+                        const lastRevision = existingRevisions[existingRevisions.length - 1];
+                        if (lastRevision.nextSibling) {
+                            root.insertBefore(importedRevision, lastRevision.nextSibling);
+                        } else {
+                            root.appendChild(importedRevision);
+                        }
+                    } else {
+                        // Insert at the beginning of the root element
+                        if (root.firstElementChild) {
+                            root.insertBefore(importedRevision, root.firstElementChild);
+                        } else {
+                            root.appendChild(importedRevision);
+                        }
+                    }
                 }
-            }
+            } else if (revisionXML.trim().startsWith('<revisionComment>')) {
+                // Parse the AI-generated revision comment
+                const revisionDoc = parser.parseFromString(`<root>${revisionXML}</root>`, 'application/xml');
+                const revisionCommentNode = revisionDoc.querySelector('revisionComment');
+                
+                if (revisionCommentNode) {
+                    // Import the revision comment node directly
+                    const importedRevisionComment = doc.importNode(revisionCommentNode, true);
+                    
+                    // Insert the revisionComment directly into the root element
+                    // Place it at the beginning, after any existing revisionComment elements
+                    const existingRevisionComments = root.querySelectorAll('revisionComment');
+                    if (existingRevisionComments.length > 0) {
+                        // Insert after the last existing revisionComment
+                        const lastComment = existingRevisionComments[existingRevisionComments.length - 1];
+                        if (lastComment.nextSibling) {
+                            root.insertBefore(importedRevisionComment, lastComment.nextSibling);
+                        } else {
+                            root.appendChild(importedRevisionComment);
+                        }
+                    } else {
+                        // Insert at the beginning of the root element
+                        if (root.firstElementChild) {
+                            root.insertBefore(importedRevisionComment, root.firstElementChild);
+                        } else {
+                            root.appendChild(importedRevisionComment);
+                        }
+                    }
+                }
+            } else {
+                // Legacy behavior: Handle wrapped revision format
+                // Look for existing Revisions section
+                let revisionsElement = doc.querySelector('Revisions');
+                
+                if (!revisionsElement) {
+                    // Create new Revisions section
+                    revisionsElement = doc.createElement('Revisions');
+                    
+                    // Insert after root opening tag but before main content
+                    if (root.firstElementChild) {
+                        root.insertBefore(revisionsElement, root.firstElementChild);
+                    } else {
+                        root.appendChild(revisionsElement);
+                    }
+                }
 
-            // Create revision element
-            const revisionElement = doc.createElement('Revision');
-            
-            // Parse and add revision content
-            const revisionDoc = parser.parseFromString(`<root>${revisionXML}</root>`, 'application/xml');
-            const revisionNode = revisionDoc.querySelector('Revision');
-            
-            if (revisionNode) {
-                // Import the revision node
-                const importedRevision = doc.importNode(revisionNode, true);
-                revisionsElement.appendChild(importedRevision);
+                // Create revision element
+                const revisionElement = doc.createElement('Revision');
+                
+                // Parse and add revision content
+                const revisionDoc = parser.parseFromString(`<root>${revisionXML}</root>`, 'application/xml');
+                const revisionNode = revisionDoc.querySelector('Revision');
+                
+                if (revisionNode) {
+                    // Import the revision node
+                    const importedRevision = doc.importNode(revisionNode, true);
+                    revisionsElement.appendChild(importedRevision);
+                }
             }
 
             // Serialize back to string
