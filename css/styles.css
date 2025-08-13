@@ -1028,3 +1028,62 @@ header p {
     transform: scale(1.02);
     transition: all 0.3s ease;
 }
+
+/* Styles for XML elements preserved in Quill editor */
+.revision-comment {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-style: italic;
+    color: #856404;
+    position: relative;
+    border-left: 4px solid #f39c12;
+}
+
+.revision-comment::before {
+    content: "";
+    font-weight: bold;
+    font-style: normal;
+    color: #f39c12;
+}
+
+/* Ensure XML elements maintain their styling in the editor */
+.ql-editor .revision-comment {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    font-style: italic;
+    color: #856404;
+    border-left: 4px solid #f39c12;
+}
+
+.ql-editor .topic {
+    border: 1px dashed #007bff;
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 4px;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.ql-editor .section {
+    border: 1px dashed #28a745;
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 4px;
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.ql-editor .para {
+    margin: 4px 0;
+}
+
+.ql-editor h1 {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+}

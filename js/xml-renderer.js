@@ -8,9 +8,14 @@ class XMLRenderer {
     // Convert HTML from WYSIWYG to XML
     htmlToXml(html) {
         try {
-            // Simple HTML to XML conversion
-            // This is a basic implementation - you can enhance based on your needs
+            // Enhanced HTML to XML conversion with revisionComment support
             let xml = html
+                // Convert hidden revision comments back to XML elements
+                .replace(/<!--\s*REVISION_COMMENT([^:]*?):\s*([^-]*?)\s*-->/g, '<revisionComment$1>$2</revisionComment>')
+                
+                // Standard conversions
+                .replace(/<h1[^>]*>/g, '<title>')
+                .replace(/<\/h1>/g, '</title>')
                 .replace(/<p>/g, '<paragraph>')
                 .replace(/<\/p>/g, '</paragraph>')
                 .replace(/<strong>/g, '<bold>')
@@ -25,6 +30,10 @@ class XMLRenderer {
                 .replace(/<\/li>/g, '</item>')
                 .replace(/<br>/g, '<br/>')
                 .replace(/<br\/>/g, '<br/>');
+
+            // Clean up any remaining div tags that weren't converted
+            xml = xml.replace(/<div[^>]*>/g, '').replace(/<\/div>/g, '');
+            xml = xml.replace(/<span[^>]*>/g, '').replace(/<\/span>/g, '');
 
             // Wrap in root element if not already wrapped
             if (!xml.startsWith('<?xml')) {
@@ -58,6 +67,8 @@ class XMLRenderer {
                 .replace(/<\/title>/g, '</h1>')
                 .replace(/<para[^>]*>/g, '<p>')
                 .replace(/<\/para>/g, '</p>')
+                // IMPORTANT: Hide revisionComment from WYSIWYG editor - convert to hidden comment
+                .replace(/<revisionComment([^>]*)>([^<]*)<\/revisionComment>/g, '<!-- REVISION_COMMENT$1: $2 -->')
                 .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
                 .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
                 .replace(/<Revisions[^>]*>/g, '<div class="revisions-section">')

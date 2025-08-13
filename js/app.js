@@ -20,9 +20,51 @@ class XMLEditor {
     }
 
     initializeEditor() {
+        // Register custom Quill formats for XML elements before initializing
+        const Block = Quill.import('blots/block');
+
+        // Custom block format for revision comments
+        class RevisionCommentBlot extends Block {
+            static create(value) {
+                let node = super.create();
+                node.setAttribute('class', 'revision-comment');
+                node.setAttribute('data-xml-element', 'revisionComment');
+                if (value && typeof value === 'object') {
+                    Object.keys(value).forEach(key => {
+                        if (key !== 'class' && key !== 'data-xml-element') {
+                            node.setAttribute(key, value[key]);
+                        }
+                    });
+                }
+                return node;
+            }
+
+            static formats(node) {
+                const attributes = {};
+                Array.from(node.attributes).forEach(attr => {
+                    if (attr.name !== 'class' && attr.name !== 'data-xml-element') {
+                        attributes[attr.name] = attr.value;
+                    }
+                });
+                return attributes;
+            }
+        }
+        RevisionCommentBlot.blotName = 'revision-comment';
+        RevisionCommentBlot.tagName = 'div';
+        RevisionCommentBlot.className = 'revision-comment';
+
+        // Register the custom format
+        Quill.register(RevisionCommentBlot);
+
         // Initialize Quill WYSIWYG editor
         this.quill = new Quill('#editor', {
             theme: 'snow',
+            formats: [
+                'header', 'bold', 'italic', 'underline', 'strike',
+                'blockquote', 'list', 'bullet', 'indent',
+                'link', 'image', 'code-block',
+                'revision-comment' // Add custom format
+            ],
             modules: {
                 toolbar: [
                     [{ 'header': [1, 2, 3, false] }],
