@@ -8,11 +8,106 @@ class XMLRenderer {
     // Convert HTML from WYSIWYG to XML
     htmlToXml(html) {
         try {
-            // Simple HTML to XML conversion
-            // This is a basic implementation - you can enhance based on your needs
-            let xml = html
-                .replace(/<p>/g, '<paragraph>')
-                .replace(/<\/p>/g, '</paragraph>')
+            // Convert HTML elements back to XML elements, prioritizing stored original XML data
+            let xml = html;
+            
+            // First, restore original XML elements from data-original attributes
+            xml = xml.replace(/<([^>]+)\s+data-original="([^"]*)"[^>]*>/g, (match, tagContent, originalEncoded) => {
+                try {
+                    const original = decodeURIComponent(originalEncoded);
+                    return original;
+                } catch (e) {
+                    // If decoding fails, fall back to manual conversion
+                    return match;
+                }
+            });
+            
+            // Handle elements that don't have data-original attributes
+            xml = xml
+                // Convert divs and headers back to XML elements
+                .replace(/<div class="product">/g, '<product>')
+                .replace(/<div class="topic">/g, '<topic>')
+                .replace(/<div class="section">/g, '<section>')
+                .replace(/<header>/g, '<frontMatter>')
+                .replace(/<\/header>/g, '</frontMatter>')
+                .replace(/<div class="revision-metadata">/g, '<revisionMetadata>')
+                .replace(/<div class="revisions-section">/g, '<Revisions>')
+                .replace(/<div class="revision">/g, '<Revision>')
+                
+                // Convert headers and paragraphs back
+                .replace(/<h1([^>]*)>/g, '<title$1>')
+                .replace(/<\/h1>/g, '</title>')
+                .replace(/<p([^>]*)>/g, (match, attrs) => {
+                    // Clean out class attributes that are HTML-specific
+                    const cleanAttrs = attrs.replace(/\s*class="[^"]*"/g, '').replace(/\s*data-original="[^"]*"/g, '');
+                    if (match.includes('class="reference"')) {
+                        // This was a reference element, try to reconstruct
+                        const content = match; // Will be handled separately
+                        return match; // Keep as is for now, will be processed below
+                    }
+                    return `<para${cleanAttrs}>`;
+                })
+                .replace(/<\/p>/g, function(match, offset, string) {
+                    // Check if this was a reference paragraph
+                    const beforeMatch = string.substring(Math.max(0, offset - 200), offset);
+                    if (beforeMatch.includes('class="reference"')) {
+                        return '</p>'; // Keep as paragraph for references
+                    }
+                    return '</para>';
+                })
+                
+                // Handle reference elements specially
+                .replace(/<p class="reference"[^>]*>📄 Topic Reference: ([^<]*)<\/p>/g, '<topicRef ref="$1"/>')
+                .replace(/<p class="reference"[^>]*>📋 Section Reference: ([^<]*)<\/p>/g, '<sectionRef ref="$1"/>')
+                .replace(/<p class="reference"[^>]*>📄 References: ([^<]*)<\/p>/g, '<topicRef ref="$1"/>')
+                .replace(/<p class="reference"[^>]*>📋 Section: ([^<]*)<\/p>/g, '<sectionRef ref="$1"/>')
+                
+                // Handle revision elements
+                .replace(/<span class="revision-date"[^>]*>Date: ([^<]*)<\/span>/g, '<revisionDate>$1</revisionDate>')
+                .replace(/<span class="revision-comment"[^>]*>Comment: ([^<]*)<\/span>/g, '<revisionComment>$1</revisionComment>')
+                .replace(/<span class="revision-number"[^>]*>Rev: ([^<]*)<\/span>/g, '<RevisionNumber>$1</RevisionNumber>')
+                
+                // Handle generic divs
+                .replace(/<\/div>/g, function(match, offset, string) {
+                    // Look backwards to find the opening element to determine its type
+                    const beforeMatch = string.substring(0, offset);
+                    const lastProductIndex = beforeMatch.lastIndexOf('<product>');
+                    const lastTopicIndex = beforeMatch.lastIndexOf('<topic>');
+                    const lastSectionIndex = beforeMatch.lastIndexOf('<section>');
+                    const lastRevisionMetadataIndex = beforeMatch.lastIndexOf('<revisionMetadata>');
+                    const lastRevisionsIndex = beforeMatch.lastIndexOf('<Revisions>');
+                    const lastRevisionIndex = beforeMatch.lastIndexOf('<Revision>');
+                    
+                    // Find corresponding close tags
+                    const lastProductCloseIndex = beforeMatch.lastIndexOf('</product>');
+                    const lastTopicCloseIndex = beforeMatch.lastIndexOf('</topic>');
+                    const lastSectionCloseIndex = beforeMatch.lastIndexOf('</section>');
+                    const lastRevisionMetadataCloseIndex = beforeMatch.lastIndexOf('</revisionMetadata>');
+                    const lastRevisionsCloseIndex = beforeMatch.lastIndexOf('</Revisions>');
+                    const lastRevisionCloseIndex = beforeMatch.lastIndexOf('</Revision>');
+                    
+                    // Determine which element needs closing
+                    const indices = [
+                        { index: lastProductIndex, close: lastProductCloseIndex, tag: '</product>' },
+                        { index: lastTopicIndex, close: lastTopicCloseIndex, tag: '</topic>' },
+                        { index: lastSectionIndex, close: lastSectionCloseIndex, tag: '</section>' },
+                        { index: lastRevisionMetadataIndex, close: lastRevisionMetadataCloseIndex, tag: '</revisionMetadata>' },
+                        { index: lastRevisionsIndex, close: lastRevisionsCloseIndex, tag: '</Revisions>' },
+                        { index: lastRevisionIndex, close: lastRevisionCloseIndex, tag: '</Revision>' }
+                    ];
+                    
+                    // Find the most recent unclosed element
+                    let mostRecent = { index: -1, tag: '</div>' };
+                    for (const item of indices) {
+                        if (item.index > item.close && item.index > mostRecent.index) {
+                            mostRecent = item;
+                        }
+                    }
+                    
+                    return mostRecent.tag;
+                })
+                
+                // Convert basic formatting
                 .replace(/<strong>/g, '<bold>')
                 .replace(/<\/strong>/g, '</bold>')
                 .replace(/<em>/g, '<italic>')
@@ -24,12 +119,11 @@ class XMLRenderer {
                 .replace(/<li>/g, '<item>')
                 .replace(/<\/li>/g, '</item>')
                 .replace(/<br>/g, '<br/>')
-                .replace(/<br\/>/g, '<br/>');
-
-            // Wrap in root element if not already wrapped
-            if (!xml.startsWith('<?xml')) {
-                xml = `<?xml version="1.0" encoding="UTF-8"?>\n<document>\n${xml}\n</document>`;
-            }
+                .replace(/<br\/>/g, '<br/>')
+                
+                // Clean up remaining HTML attributes that shouldn't be in XML
+                .replace(/\s+data-original="[^"]*"/g, '')
+                .replace(/\s+class="[^"]*"/g, '');
 
             return xml;
         } catch (error) {
@@ -39,70 +133,174 @@ class XMLRenderer {
     }
 
     // Convert XML to HTML for WYSIWYG display
-    xmlToHtml(xml) {
+    xmlToHtml(xml, includeDataStorage = false) {
         try {
-            // Handle specialized XML elements from the sample files
-            //xml = xml.replace(/<\?xml[^?]*\?>/g,'')
-               
-            let html = xml
-                .replace(/<\?xml[^>]*\?>/g, '') // Remove XML declaration
-                .replace(/<product[^>]*>/g, '<div class="product">')
+            // Store the original XML declaration
+            const xmlDeclaration = xml.match(/<\?xml[^>]*\?>/);
+            const originalXml = xml; // Store the complete original for potential restoration
+            
+            // Remove XML declaration for processing
+            let html = xml.replace(/<\?xml[^>]*\?>/g, '');
+            
+            // Store the original XML in a hidden element for perfect round-trip (only when needed)
+            const xmlData = encodeURIComponent(originalXml);
+            
+            // Handle complex XML elements while preserving their original structure
+            html = html
+                // Store original XML elements with attributes as data attributes - handle self-closing and regular tags
+                .replace(/<(product[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="product" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="product" data-original="${encoded}">`;
+                })
+                .replace(/<(topic[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="topic" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="topic" data-original="${encoded}">`;
+                })
+                .replace(/<(section[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="section" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="section" data-original="${encoded}">`;
+                })
+                .replace(/<(frontMatter[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<header data-original="${encoded}" data-self-closing="true"></header>`;
+                    }
+                    return `<header data-original="${encoded}">`;
+                })
+                .replace(/<(revisionMetadata[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="revision-metadata" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="revision-metadata" data-original="${encoded}">`;
+                })
+                .replace(/<(Revisions[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="revisions-section" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="revisions-section" data-original="${encoded}">`;
+                })
+                .replace(/<(Revision[^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match);
+                    if (closing.includes('/')) {
+                        return `<div class="revision" data-original="${encoded}" data-self-closing="true"></div>`;
+                    }
+                    return `<div class="revision" data-original="${encoded}">`;
+                })
+                
+                // Convert closing tags
                 .replace(/<\/product>/g, '</div>')
-                .replace(/<frontMatter[^>]*>/g, '<header>')
-                .replace(/<\/frontMatter>/g, '</header>')
-                .replace(/<topic[^>]*>/g, '<div class="topic">')
                 .replace(/<\/topic>/g, '</div>')
-                .replace(/<section[^>]*>/g, '<div class="section">')
                 .replace(/<\/section>/g, '</div>')
-                .replace(/<title[^>]*>/g, '<h1>')
-                .replace(/<\/title>/g, '</h1>')
-                .replace(/<para[^>]*>/g, '<p>')
-                .replace(/<\/para>/g, '</p>')
-                .replace(/<topicRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📄 References: $1</p>')
-                .replace(/<sectionRef[^>]*ref="([^"]*)"[^>]*>/g, '<p class="reference">📋 Section: $1</p>')
-                .replace(/<Revisions[^>]*>/g, '<div class="revisions-section">')
+                .replace(/<\/frontMatter>/g, '</header>')
+                .replace(/<\/revisionMetadata>/g, '</div>')
                 .replace(/<\/Revisions>/g, '</div>')
-                .replace(/<Revision[^>]*>/g, '<div class="revision">')
                 .replace(/<\/Revision>/g, '</div>')
+                
+                // Handle title elements - preserve id attributes
+                .replace(/<title([^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match.replace(/(\s*\/?>)$/, '>'));
+                    if (closing.includes('/')) {
+                        return `<h1${attrs} data-original="${encoded}" data-self-closing="true"></h1>`;
+                    }
+                    return `<h1${attrs} data-original="${encoded}">`;
+                })
+                .replace(/<\/title>/g, '</h1>')
+                
+                // Handle para elements - preserve id attributes  
+                .replace(/<para([^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match.replace(/(\s*\/?>)$/, '>'));
+                    if (closing.includes('/')) {
+                        return `<p${attrs} data-original="${encoded}" data-self-closing="true"></p>`;
+                    }
+                    return `<p${attrs} data-original="${encoded}">`;
+                })
+                .replace(/<\/para>/g, '</p>')
+                
+                // Handle revision date and comment elements
+                .replace(/<revisionDate([^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match.replace(/(\s*\/?>)$/, '>'));
+                    if (closing.includes('/')) {
+                        return `<span class="revision-date" data-original="${encoded}" data-self-closing="true">Date: </span>`;
+                    }
+                    return `<span class="revision-date" data-original="${encoded}">Date: `;
+                })
+                .replace(/<\/revisionDate>/g, '</span>')
+                .replace(/<revisionComment([^>]*?)(\s*\/?>)/g, (match, attrs, closing) => {
+                    const encoded = encodeURIComponent(match.replace(/(\s*\/?>)$/, '>'));
+                    if (closing.includes('/')) {
+                        return `<span class="revision-comment" data-original="${encoded}" data-self-closing="true">Comment: </span>`;
+                    }
+                    return `<span class="revision-comment" data-original="${encoded}">Comment: `;
+                })
+                .replace(/<\/revisionComment>/g, '</span>')
+                
+                // Handle reference elements (self-closing)
+                .replace(/<topicRef([^>]*?)\/>/g, (match, attrs) => {
+                    const refMatch = attrs.match(/ref="([^"]*)"/);
+                    const ref = refMatch ? refMatch[1] : '';
+                    const encoded = encodeURIComponent(match);
+                    return `<p class="reference" data-original="${encoded}">📄 Topic Reference: ${ref}</p>`;
+                })
+                .replace(/<sectionRef([^>]*?)\/>/g, (match, attrs) => {
+                    const refMatch = attrs.match(/ref="([^"]*)"/);
+                    const ref = refMatch ? refMatch[1] : '';
+                    const encoded = encodeURIComponent(match);
+                    return `<p class="reference" data-original="${encoded}">📋 Section Reference: ${ref}</p>`;
+                })
+                
+                // Handle revision elements
                 .replace(/<RevisionNumber[^>]*>/g, '<span class="revision-number">Rev: ')
                 .replace(/<\/RevisionNumber>/g, '</span>')
                 .replace(/<RevisionDate[^>]*>/g, '<span class="revision-date">Date: ')
                 .replace(/<\/RevisionDate>/g, '</span>')
                 .replace(/<RevisionComment[^>]*>/g, '<span class="revision-comment">Comment: ')
                 .replace(/<\/RevisionComment>/g, '</span>')
-                // Keep existing conversions for compatibility
-                .replace(/<document>/g, '')
-                .replace(/<\/document>/g, '')
-                .replace(/<paragraph>/g, '<p>')
-                .replace(/<\/paragraph>/g, '</p>')
+                
+                // Handle basic formatting elements
                 .replace(/<bold>/g, '<strong>')
                 .replace(/<\/bold>/g, '</strong>')
                 .replace(/<italic>/g, '<em>')
                 .replace(/<\/italic>/g, '</em>')
+                
+                // Handle lists
                 .replace(/<list type="unordered">/g, '<ul>')
                 .replace(/<list type="ordered">/g, '<ol>')
                 .replace(/<\/list>/g, function(match, offset, string) {
-                    // Look backwards to find the opening list tag to determine if it's ul or ol
                     const beforeMatch = string.substring(0, offset);
                     const lastUlIndex = beforeMatch.lastIndexOf('<ul>');
                     const lastOlIndex = beforeMatch.lastIndexOf('<ol>');
                     const lastUlCloseIndex = beforeMatch.lastIndexOf('</ul>');
                     const lastOlCloseIndex = beforeMatch.lastIndexOf('</ol>');
                     
-                    // Determine which type of list is currently open
                     if (lastUlIndex > lastOlIndex && lastUlIndex > lastUlCloseIndex) {
                         return '</ul>';
                     } else if (lastOlIndex > lastUlIndex && lastOlIndex > lastOlCloseIndex) {
                         return '</ol>';
                     } else {
-                        return '</ul>'; // Default to ul if unclear
+                        return '</ul>';
                     }
                 })
                 .replace(/<item>/g, '<li>')
                 .replace(/<\/item>/g, '</li>')
                 .replace(/<br\/>/g, '<br>');
 
-                return html.trim();
+            // Only add hidden input for data storage when explicitly requested (not for Quill editor)
+            if (includeDataStorage) {
+                html = `<input type="hidden" id="original-xml-data" value="${xmlData}" />${html}`;
+            }
+
+            return html.trim();
         } catch (error) {
             console.error('Error converting XML to HTML:', error);
             return xml;

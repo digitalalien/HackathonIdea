@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug XML Conversion</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .content { background: #f9f9f9; padding: 10px; white-space: pre-wrap; font-family: monospace; }
+        .html-render { border: 1px solid #ddd; padding: 10px; min-height: 100px; }
+        button { padding: 10px 20px; margin: 5px; }
+        .test-controls { margin: 20px 0; }
+    </style>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Debug XML Conversion</h1>
+    
+    <div class="test-controls">
+        <button onclick="testSample1()">Test Sample 1 (AI Sample 2)</button>
+        <button onclick="testSample2()">Test Sample 2 (Definition)</button>
+        <button onclick="testSample3()">Test Sample 3 (AI Sample 1)</button>
+        <button onclick="testSample4()">Test Sample 4 (Product)</button>
+    </div>
+    
+    <div class="section">
+        <h2>1. Original XML:</h2>
+        <div id="original-xml" class="content"></div>
+    </div>
+    
+    <div class="section">
+        <h2>2. Converted to HTML (for WYSIWYG):</h2>
+        <div id="converted-html" class="content"></div>
+    </div>
+    
+    <div class="section">
+        <h2>3. Rendered HTML (how it looks in WYSIWYG):</h2>
+        <div id="rendered-html" class="html-render"></div>
+    </div>
+    
+    <div class="section">
+        <h2>4. HTML back to XML:</h2>
+        <div id="back-to-xml" class="content"></div>
+    </div>
+    
+    <div class="section">
+        <h2>5. Round-trip Success:</h2>
+        <div id="comparison" class="content"></div>
+    </div>
+
+    <script src="js/xml-renderer.js"></script>
+    <script>
+        const renderer = new XMLRenderer();
+        
+        const samples = {
+            sample1: `<?xml version="1.0" encoding="UTF-8"?>
+<topic
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    type="chapter"
+    xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0"
+    documentRefId="id-b1fd84a8-7588-4623-9783-7ac28504adcd"
+>
+    <title id="id-9b25de3a-cc2f-4882-d7c1-6bf9d16454d1">AI Sample 2</title>
+    <para id="id-84ed7a68-a901-4bd3-8618-698ad00fa86e">
+        Build context-aware, reasoning applications with LangChain's flexible abstractions and AI-first toolkits.
+    </para>
+    
+    <revisionMetadata>
+        <revisionDate>2025-08-12</revisionDate>
+        <revisionComment>Initial draft created for AI integration demo.</revisionComment>
+    </revisionMetadata>
+</topic>`,
+            
+            sample2: `<?xml version="1.0" encoding="UTF-8"?><section xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="definition" xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0" id="id-00293eb4-09ff-4f01-cb14-548a15bbaea4"><para id="id-6881943d-c595-4758-d8a4-d9ab86afb3ef">Comparison Between 1 and 2</para><para id="id-2e12142f-6847-4fab-8a86-6c77988a47f9">Look better</para></section>`,
+            
+            sample3: `<?xml version="1.0" encoding="UTF-8"?><topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" documentRefId="Introduction" type="chapter" xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0"><title id="id-966f54a6-575f-4d59-b333-7c1d2d352ab9">AI Sample1</title><para id="id-bf47c91a-8816-445e-b203-adf758903d59">Insert Paragraph Here</para><sectionRef ref="3f4cb412-7589-4e8c-9fd8-d047edcac704.xml" /></topic>`,
+            
+            sample4: `<?xml version="1.0" encoding="UTF-8"?><product xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" type="booklet" manualCode="Sample Package" manualNumber="0.0.0" xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0"><frontMatter><title id="id-45047049-48b9-417a-b91a-99a06d479dbb">Title</title></frontMatter><topicRef ref="d727acbd-1538-40cd-a336-9a70e22c4772.xml" /><topicRef ref="75dc85d0-5719-4518-96c3-7f42effc1a5d.xml" /></product>`
+        };
+        
+        function testSample(sampleKey) {
+            const originalXml = samples[sampleKey];
+            
+            console.log('Testing with:', sampleKey);
+            console.log('Original XML:', originalXml);
+            
+            // Display original XML
+            document.getElementById('original-xml').textContent = originalXml;
+            
+            // Convert to HTML
+            const htmlResult = renderer.xmlToHtml(originalXml);
+            console.log('HTML Result:', htmlResult);
+            document.getElementById('converted-html').textContent = htmlResult;
+            
+            // Render the HTML
+            document.getElementById('rendered-html').innerHTML = htmlResult;
+            
+            // Convert back to XML
+            const backToXml = renderer.htmlToXml(htmlResult);
+            console.log('Back to XML:', backToXml);
+            document.getElementById('back-to-xml').textContent = backToXml;
+            
+            // Compare
+            const comparison = originalXml.replace(/\s+/g, ' ').trim() === backToXml.replace(/\s+/g, ' ').trim() 
+                ? '✅ SUCCESS: Round-trip conversion preserved the XML structure!'
+                : '❌ ISSUE: Round-trip conversion modified the XML structure.';
+            
+            document.getElementById('comparison').textContent = comparison;
+        }
+        
+        function testSample1() { testSample('sample1'); }
+        function testSample2() { testSample('sample2'); }
+        function testSample3() { testSample('sample3'); }
+        function testSample4() { testSample('sample4'); }
+        
+        // Test first sample by default
+        testSample1();
+    </script>
+</body>
+</html>

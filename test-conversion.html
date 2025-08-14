@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test XML Conversion</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .xml-content { background: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+        .html-content { background: #fff5f5; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>XML to HTML Conversion Test</h1>
+    
+    <div class="test-section">
+        <h2>Original XML:</h2>
+        <div id="original-xml" class="xml-content"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Converted to HTML:</h2>
+        <div id="converted-html" class="html-content"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>HTML back to XML:</h2>
+        <div id="back-to-xml" class="xml-content"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Rendered HTML:</h2>
+        <div id="rendered-html" style="border: 1px solid #ddd; padding: 10px;"></div>
+    </div>
+
+    <script src="js/xml-renderer.js"></script>
+    <script>
+        // Test XML from your samples
+        const testXml = `<?xml version="1.0" encoding="UTF-8"?>
+<topic
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    type="chapter"
+    xsi:noNamespaceSchemaLocation="urn:fontoxml:cpa.xsd:1.0"
+    documentRefId="id-b1fd84a8-7588-4623-9783-7ac28504adcd"
+>
+    <title id="id-9b25de3a-cc2f-4882-d7c1-6bf9d16454d1">AI Sample 2</title>
+    <para id="id-84ed7a68-a901-4bd3-8618-698ad00fa86e">
+        Build context-aware, reasoning applications with LangChain's flexible abstractions and AI-first toolkits.
+    </para>
+    
+    <revisionMetadata>
+        <revisionDate>2025-08-12</revisionDate>
+        <revisionComment>Initial draft created for AI integration demo.</revisionComment>
+    </revisionMetadata>
+</topic>`;
+
+        const renderer = new XMLRenderer();
+        
+        // Display original XML
+        document.getElementById('original-xml').textContent = testXml;
+        
+        // Convert to HTML
+        const htmlResult = renderer.xmlToHtml(testXml);
+        document.getElementById('converted-html').textContent = htmlResult;
+        
+        // Convert back to XML
+        const backToXml = renderer.htmlToXml(htmlResult);
+        document.getElementById('back-to-xml').textContent = backToXml;
+        
+        // Render the HTML
+        document.getElementById('rendered-html').innerHTML = htmlResult;
+    </script>
+</body>
+</html>

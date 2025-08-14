@@ -603,6 +603,44 @@ header p {
     color: #2d3436;
 }
 
+/* Revision Metadata Styles */
+.revision-metadata {
+    background: #f1c40f;
+    border: 2px solid #f39c12;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 10px 0;
+    position: relative;
+}
+
+.revision-metadata::before {
+    content: "📅 METADATA";
+    position: absolute;
+    top: -12px;
+    left: 15px;
+    background: #f39c12;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.revision-metadata .revision-date,
+.revision-metadata .revision-comment {
+    display: block;
+    margin: 5px 0;
+}
+
+/* Section Styles */
+.section {
+    border: 2px solid var(--primary-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin: 10px 0;
+    background: #e3f2fd;
+}
+
 /* Revision Comment Styles */
 .revision-info {
     background: #f8f9fa;

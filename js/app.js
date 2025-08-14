@@ -19,18 +19,28 @@ class XMLEditor {
     }
 
     initializeEditor() {
-        // Initialize Quill WYSIWYG editor
-        this.quill = new Quill('#editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    [{ 'header': [1, 2, 3, false] }],
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    ['link', 'blockquote', 'code-block'],
-                    ['clean']
-                ]
-            }
+        // Initialize Monaco Editor with XML syntax highlighting
+        this.monacoEditor = null;
+        
+        // We'll initialize Monaco after the page loads
+        require.config({ paths: { vs: 'https://unpkg.com/monaco-editor@latest/min/vs' } });
+        require(['vs/editor/editor.main'], () => {
+            this.monacoEditor = monaco.editor.create(document.getElementById('editor'), {
+                value: '',
+                language: 'xml',
+                theme: 'vs',
+                automaticLayout: true,
+                wordWrap: 'on',
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                renderWhitespace: 'boundary',
+                showFoldingControls: 'always'
+            });
+
+            // Set up change listener for Monaco
+            this.monacoEditor.onDidChangeModelContent(() => {
+                this.updateXmlFromEditor();
+            });
         });
 
         // Get DOM elements
@@ -38,6 +48,7 @@ class XMLEditor {
             toggleView: document.getElementById('toggleView'),
             validateXml: document.getElementById('validateXml'),
             clearEditor: document.getElementById('clearEditor'),
+            loadRealSample: document.getElementById('loadRealSample'),
             exportXml: document.getElementById('exportXml'),
             importXml: document.getElementById('importXml'),
             importBtn: document.getElementById('importBtn'),
@@ -58,7 +69,7 @@ class XMLEditor {
         if (this.isXmlView && this.elements) {
             this.elements.wysiwyg.style.display = 'none';
             this.elements.xmlSource.style.display = 'block';
-            this.elements.toggleView.textContent = 'Switch to WYSIWYG View';
+            this.elements.toggleView.textContent = 'Switch to Visual View';
         }
     }
 
@@ -77,17 +88,13 @@ class XMLEditor {
                 this.closeModal();
             });
         });
-        // Editor content changes
-        this.quill.on('text-change', () => {
-            this.updateXmlFromEditor();
-        });
-
+        
         // XML source changes
         this.elements.xmlSource.addEventListener('input', () => {
             this.updateEditorFromXml();
         });
 
-        // Toggle between WYSIWYG and XML view
+        // Toggle between Visual and XML view
         this.elements.toggleView.addEventListener('click', () => {
             this.toggleView();
         });
@@ -100,6 +107,11 @@ class XMLEditor {
         // Clear editor
         this.elements.clearEditor.addEventListener('click', () => {
             this.clearEditor();
+        });
+
+        // Load real sample
+        this.elements.loadRealSample.addEventListener('click', () => {
+            this.loadRealSample();
         });
 
         // Export XML
@@ -164,26 +176,55 @@ class XMLEditor {
             this.revisionManager.setOriginalContent(sampleXml);
         }
 
-        // Convert to HTML for WYSIWYG editor
-        const htmlContent = this.xmlRenderer.xmlToHtml(sampleXml);
-        this.quill.root.innerHTML = htmlContent;
+        // Load content into Monaco editor if available
+        if (this.monacoEditor) {
+            this.monacoEditor.setValue(sampleXml);
+        }
         
         // Update preview
         this.updatePreview();
         this.setStatus('Sample content loaded');
     }
 
+    // Load a real XML sample from the samples folder
+    async loadRealSample() {
+        try {
+            const response = await fetch('xml-samples/75dc85d0-5719-4518-96c3-7f42effc1a5d.xml');
+            const xmlContent = await response.text();
+            
+            this.currentXml = xmlContent;
+            this.elements.xmlSource.value = xmlContent;
+
+            // Set original content for revision tracking
+            if (this.revisionManager) {
+                this.revisionManager.setOriginalContent(xmlContent);
+            }
+
+            // Load content into Monaco editor if available
+            if (this.monacoEditor) {
+                this.monacoEditor.setValue(xmlContent);
+            }
+            
+            // Update preview
+            this.updatePreview();
+            this.setStatus('Real XML sample loaded', 'success');
+        } catch (error) {
+            console.error('Error loading sample:', error);
+            this.setStatus('Failed to load XML sample', 'error');
+        }
+    }
+
     toggleView() {
         this.isXmlView = !this.isXmlView;
 
         if (this.isXmlView) {
-            // Switch to XML view
+            // Switch to XML view (text area)
             this.elements.wysiwyg.style.display = 'none';
             this.elements.xmlSource.style.display = 'block';
-            this.elements.toggleView.textContent = 'Switch to WYSIWYG View';
+            this.elements.toggleView.textContent = 'Switch to Visual View';
             this.updateXmlFromEditor();
         } else {
-            // Switch to WYSIWYG view
+            // Switch to Visual view (Monaco editor)
             this.elements.wysiwyg.style.display = 'block';
             this.elements.xmlSource.style.display = 'none';
             this.elements.toggleView.textContent = 'Switch to XML View';
@@ -192,9 +233,9 @@ class XMLEditor {
     }
 
     updateXmlFromEditor() {
-        if (!this.isXmlView) {
-            const htmlContent = this.quill.root.innerHTML;
-            this.currentXml = this.xmlRenderer.htmlToXml(htmlContent);
+        if (!this.isXmlView && this.monacoEditor) {
+            // In visual view, get content from Monaco editor
+            this.currentXml = this.monacoEditor.getValue();
             this.elements.xmlSource.value = this.currentXml;
             this.updatePreview();
         }
@@ -202,12 +243,15 @@ class XMLEditor {
 
     updateEditorFromXml() {
         if (this.isXmlView) {
+            // Update current XML from the text area
             this.currentXml = this.elements.xmlSource.value;
-            const htmlContent = this.xmlRenderer.xmlToHtml(this.currentXml);
-            this.quill.root.innerHTML = htmlContent;
-           
-            this.updatePreview();
         }
+        
+        // Update Monaco editor with current XML content
+        if (this.monacoEditor) {
+            this.monacoEditor.setValue(this.currentXml);
+        }
+        this.updatePreview();
     }
 
     updatePreview() {
@@ -233,7 +277,9 @@ class XMLEditor {
 
     clearEditor() {
         if (confirm('Are you sure you want to clear the editor?')) {
-            this.quill.setContents([]);
+            if (this.monacoEditor) {
+                this.monacoEditor.setValue('');
+            }
             this.elements.xmlSource.value = '';
             this.currentXml = '';
             this.updatePreview();

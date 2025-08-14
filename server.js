@@ -16,6 +16,9 @@ const PORT = process.env.PORT || 3001;
 // Simple wildcard CORS for local development
 app.use(cors());
 
+// Serve static files
+app.use(express.static('.'));
+
 // Body parsing middleware - MUST come before route handlers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -126,6 +129,11 @@ app.post('/api/ai', async (req, res) => {
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+// Serve main page
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
 });
 
 // Start server
